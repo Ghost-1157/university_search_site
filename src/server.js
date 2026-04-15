@@ -86,6 +86,7 @@ function registerTableRoutes(routePrefix, service) {
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "..", "website_updated")));
+app.use("/website-updated", express.static(path.join(__dirname, "..", "website_updated")));
 app.use("/pdfs", express.static(path.join(__dirname, "..", "pdfs")));
 
 app.get("/", (_req, res) => {

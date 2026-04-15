@@ -886,7 +886,7 @@ body {
 
 .uni-hero {
   height: 60vh;
-  background: url('assets/images/university.jpg') center/cover no-repeat;
+  background: url('../assets/images/university.jpg') center/cover no-repeat;
   position: relative;
   display: flex;
   align-items: center;
