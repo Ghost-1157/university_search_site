@@ -1,9 +1,9 @@
 services:
   - type: web
     name: practice-database-api
-    env: node
+    runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -16,7 +16,7 @@ services:
 
 databases:
   - name: practice-database-postgres
-    dbName: practice_for_practice
+    databaseName: practice_for_practice
     user: postgres
     plan: free
     region: oregon
