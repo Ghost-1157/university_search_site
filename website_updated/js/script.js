@@ -295,6 +295,11 @@ function mergeUniversityData(unifiedRows) {
       tuitionText: c.tuitionText || "Не указано",
       price: c.price || "",
       programPriceBuckets: c.price ? [c.price] : [],
+      transportValue: Number.isFinite(c.transportValue) ? c.transportValue : NaN,
+      apartmentValue: Number.isFinite(c.apartmentValue) ? c.apartmentValue : NaN,
+      foodValue: Number.isFinite(c.foodValue) ? c.foodValue : NaN,
+      dormLivingValue: Number.isFinite(c.dormLivingValue) ? c.dormLivingValue : NaN,
+      leisureValue: Number.isFinite(c.leisureValue) ? c.leisureValue : NaN,
       totalLivingValue: Number.isFinite(c.totalLivingValue) ? c.totalLivingValue : NaN
     };
   });
@@ -323,6 +328,11 @@ function mergeUniversityData(unifiedRows) {
       tuitionText: "Не указано",
       price: "",
       programPriceBuckets: [],
+      transportValue: NaN,
+      apartmentValue: NaN,
+      foodValue: NaN,
+      dormLivingValue: NaN,
+      leisureValue: NaN,
       totalLivingValue: NaN
     });
   });
@@ -330,6 +340,34 @@ function mergeUniversityData(unifiedRows) {
   assignMissingLogosFromKnownCards(merged);
 
   return merged;
+}
+
+function getUniversityLivingMonthlyValue(uni) {
+  const storedTotal = toNumber(uni?.totalLivingValue);
+  if (Number.isFinite(storedTotal)) {
+    return storedTotal;
+  }
+
+  const dormCost = toNumber(uni?.dormLivingValue);
+  const apartmentCost = toNumber(uni?.apartmentValue);
+  const foodCost = toNumber(uni?.foodValue);
+  const transportCost = toNumber(uni?.transportValue);
+  const leisureCost = toNumber(uni?.leisureValue);
+
+  const extras = [foodCost, transportCost, leisureCost]
+    .filter((value) => Number.isFinite(value))
+    .reduce((sum, value) => sum + value, 0);
+
+  const primaryLiving = Number.isFinite(dormCost) ? dormCost : apartmentCost;
+  if (Number.isFinite(primaryLiving) && Number.isFinite(extras)) {
+    return primaryLiving + extras;
+  }
+
+  if (Number.isFinite(dormCost) && Number.isFinite(apartmentCost)) {
+    return Math.min(dormCost, apartmentCost) + extras;
+  }
+
+  return NaN;
 }
 
 function getElementValue(id) {
@@ -417,8 +455,9 @@ function renderUniversities(list) {
     card.className = "university-card";
     const fallbackMark = String(uni.short || uni.name).slice(0, 3).replace(/['"<>]/g, "");
 
-    const livingText = Number.isFinite(uni.totalLivingValue)
-      ? `${Math.round(uni.totalLivingValue).toLocaleString("ru-RU")} ₸`
+    const livingMonthlyValue = getUniversityLivingMonthlyValue(uni);
+    const livingText = Number.isFinite(livingMonthlyValue)
+      ? `${Math.round(livingMonthlyValue).toLocaleString("ru-RU")} ₸`
       : "Не указано";
 
     card.innerHTML = `
