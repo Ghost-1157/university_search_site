@@ -257,6 +257,7 @@ function normalizeCorrectedRow(row) {
     facultyTag: facultyTagFromSubjects(subjectPair) || facultyTagFromText(faculty),
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
+    lastYearScoreValue: toNumber(lastYearScore),
     lastYearScoreText: Number.isFinite(toNumber(lastYearScore)) ? String(Math.round(toNumber(lastYearScore))) : "Не указано",
     tuitionValue: toNumber(tuition),
     tuitionText: formatMoney(tuition),
@@ -290,6 +291,7 @@ function mergeUniversityData(unifiedRows) {
       directions: c.faculty ? [c.faculty] : [],
       passScoreValue: Number.isFinite(c.passScoreValue) ? c.passScoreValue : NaN,
       passScore: c.passScoreText || "Не указано",
+      lastYearScoreValue: Number.isFinite(c.lastYearScoreValue) ? c.lastYearScoreValue : NaN,
       lastYearScore: c.lastYearScoreText || "Не указано",
       tuitionValue: Number.isFinite(c.tuitionValue) ? c.tuitionValue : NaN,
       tuitionText: c.tuitionText || "Не указано",
@@ -323,6 +325,7 @@ function mergeUniversityData(unifiedRows) {
       directions: [],
       passScoreValue: NaN,
       passScore: "Не указано",
+      lastYearScoreValue: NaN,
       lastYearScore: "Не указано",
       tuitionValue: NaN,
       tuitionText: "Не указано",
@@ -504,7 +507,7 @@ function getFilteredUniversities() {
     const matchPrice = !priceValue || (Array.isArray(uni.programPriceBuckets) && uni.programPriceBuckets.includes(priceValue));
     const matchFaculty = !facultyValue || (Array.isArray(uni.facultyTags) && uni.facultyTags.includes(facultyValue));
     const matchDirection = !directionValue || (Array.isArray(uni.directions) && uni.directions.includes(directionValue));
-    const matchEnt = !Number.isFinite(entValue) || !Number.isFinite(uni.passScoreValue) || entValue >= uni.passScoreValue;
+    const matchEnt = !Number.isFinite(entValue) || !Number.isFinite(uni.lastYearScoreValue) || entValue >= uni.lastYearScoreValue;
     const matchDorm = !dormValue || (dormValue === "yes" ? uni.dorm : !uni.dorm);
     const matchLivingBudget = !Number.isFinite(livingBudgetValue) || !Number.isFinite(uni.totalLivingValue) || uni.totalLivingValue <= livingBudgetValue;
     const matchSearch = !searchValue || [uni.name, uni.region, uni.faculty, ...(uni.directions || [])].join(" ").toLowerCase().includes(searchValue);
