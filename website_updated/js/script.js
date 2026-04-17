@@ -240,7 +240,7 @@ function normalizeCorrectedRow(row) {
   const passScore = pickValue(row, ["pass", "ent", "threshold"], 14);
   const lastYearScore = pickValue(row, ["last", "previous", "year"], 15);
   const tuition = pickValue(row, ["tuition", "price", "cost", "fee"], 12);
-  const dormValue = pickValue(row, ["dorm", "hostel", "dormitory"], 18);
+  const dormValue = pickValue(row, ["dorm", "hostel", "accommodation"], 6);
   const transportValue = pickValue(row, ["transport", "col_17"], 16);
   const apartmentValue = pickValue(row, ["apartment", "flat", "room", "col_1"], 17);
   const foodValue = pickValue(row, ["food", "col_18"], 18);
@@ -249,6 +249,10 @@ function normalizeCorrectedRow(row) {
   const totalLivingValue = pickValue(row, ["sum", "total", "col_21"], 21);
 
   const dormText = String(dormValue || "").toLowerCase();
+  const dormCostNumeric = toNumber(dormLivingValue);
+  const hasDormCost = Number.isFinite(dormCostNumeric) && dormCostNumeric > 0;
+  const explicitDormNo = /no|false|none|нет|без/.test(dormText);
+  const explicitDormYes = /yes|true|available|has|да|есть|предостав/.test(dormText);
 
   return {
     name: String(name || ""),
@@ -262,7 +266,7 @@ function normalizeCorrectedRow(row) {
     tuitionValue: toNumber(tuition),
     tuitionText: formatMoney(tuition),
     price: priceBucketFromTuition(tuition),
-    dorm: /yes|true|1|available|has/.test(dormText),
+    dorm: explicitDormNo ? false : (explicitDormYes || hasDormCost),
     transportValue: toNumber(transportValue),
     apartmentValue: toNumber(apartmentValue),
     foodValue: toNumber(foodValue),
