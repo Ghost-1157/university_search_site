@@ -240,13 +240,13 @@ function normalizeCorrectedRow(row) {
   const passScore = pickValue(row, ["pass", "ent", "threshold"], 14);
   const lastYearScore = pickValue(row, ["last", "previous", "year"], 15);
   const tuition = pickValue(row, ["tuition", "price", "cost", "fee"], 12);
-  const dormValue = pickValue(row, ["dorm", "hostel"], 6);
-  const transportValue = pickValue(row, ["transport", "col_2"], 1);
-  const apartmentValue = pickValue(row, ["apartment", "flat", "col_1"], 2);
-  const foodValue = pickValue(row, ["food", "col_3"], 3);
-  const dormLivingValue = pickValue(row, ["dormitory", "hostel_cost", "col_4"], 4);
-  const leisureValue = pickValue(row, ["leisure", "col_5"], 5);
-  const totalLivingValue = pickValue(row, ["sum", "total", "col_6"], 6);
+  const dormValue = pickValue(row, ["dorm", "hostel", "dormitory"], 18);
+  const transportValue = pickValue(row, ["transport", "col_17"], 16);
+  const apartmentValue = pickValue(row, ["apartment", "flat", "room", "col_1"], 17);
+  const foodValue = pickValue(row, ["food", "col_18"], 18);
+  const dormLivingValue = pickValue(row, ["dormitory", "hostel_cost", "col_19"], 19);
+  const leisureValue = pickValue(row, ["leisure", "col_20"], 20);
+  const totalLivingValue = pickValue(row, ["sum", "total", "col_21"], 21);
 
   const dormText = String(dormValue || "").toLowerCase();
 
