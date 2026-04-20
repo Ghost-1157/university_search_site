@@ -585,6 +585,12 @@ function renderUniversities(list) {
     card.className = "university-card";
     const fallbackMark = String(uni.short || uni.name).slice(0, 3).replace(/['"<>]/g, "");
 
+    const hasPassScore = String(uni.passScore || "").trim() !== "" && String(uni.passScore || "").trim().toLowerCase() !== "не указано";
+    const hasLastYearScore = String(uni.lastYearScore || "").trim() !== "" && String(uni.lastYearScore || "").trim().toLowerCase() !== "не указано";
+    const passScoreDisplay = hasPassScore
+      ? uni.passScore
+      : (hasLastYearScore ? uni.lastYearScore : "Не указано");
+
     const livingMonthlyValue = getUniversityLivingMonthlyValue(uni);
     const livingText = Number.isFinite(livingMonthlyValue)
       ? `${Math.round(livingMonthlyValue).toLocaleString("ru-RU")} ₸`
@@ -602,7 +608,7 @@ function renderUniversities(list) {
           <span><strong>Город:</strong> ${uni.region}</span>
           <span><strong>Направление:</strong> ${uni.faculty || "Не указано"}</span>
           <span><strong>Общежитие:</strong> ${uni.dorm ? "Да" : "Нет"}</span>
-          <span><strong>Проходной балл:</strong> ${uni.passScore}</span>
+          <span><strong>Проходной балл:</strong> ${passScoreDisplay}</span>
           <span><strong>Минимум прошлого года:</strong> ${uni.lastYearScore}</span>
           <span><strong>Обучение:</strong> ${uni.tuitionText}</span>
           <span><strong>Проживание/месяц:</strong> ${livingText}</span>
