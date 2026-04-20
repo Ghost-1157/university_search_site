@@ -227,6 +227,27 @@ function renderRawData(correctedRows, transportRows) {
   setHtml("dbRawData", rows.length > 0 ? rows.join("") : "Нет данных по выбранному университету");
 }
 
+function resolveEntScoreText(program) {
+  const directText = String(program?.passScoreText || "").trim();
+  if (directText && directText.toLowerCase() !== "не указано") {
+    return directText;
+  }
+
+  const directNumeric = toNumber(program?.passScoreValue);
+  if (Number.isFinite(directNumeric)) {
+    return String(Math.round(directNumeric));
+  }
+
+  const row = program?.row || {};
+  const fallbackRaw = pickValue(row, ["col_16", "pass", "ent", "threshold", "minimum", "min"], 15);
+  const fallbackNumeric = toNumber(fallbackRaw);
+  if (Number.isFinite(fallbackNumeric)) {
+    return String(Math.round(fallbackNumeric));
+  }
+
+  return "Нет данных";
+}
+
 function updateProgramDependentBlocks(programs, selectedIndex) {
   if (programs.length === 0) {
     setText("entMinScore", "Минимальный балл: Нет данных");
@@ -242,8 +263,9 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   const current = programs[fallbackIndex];
 
   const tuitionText = formatMoney(current.tuitionRaw);
-  setText("entMinScore", "Минимальный балл: Нет данных");
-  setText("entThreshold", "Пороговый балл: Нет данных");
+  const entScoreText = resolveEntScoreText(current);
+  setText("entMinScore", `Минимальный балл: ${entScoreText}`);
+  setText("entThreshold", `Пороговый балл: ${entScoreText}`);
   setText("entGrant", "Гранты: Нет данных");
   setText("entCompetition", "Конкурс: Нет данных");
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
