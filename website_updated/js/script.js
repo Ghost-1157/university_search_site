@@ -54,10 +54,39 @@ const recommendationsBlock = document.getElementById("recommendationsBlock");
 const applyBtn = document.getElementById("applyFilters");
 const resetBtn = document.getElementById("resetFilters");
 const searchInput = document.getElementById("searchInput");
+const regionSelect = document.getElementById("region");
+const priceSelect = document.getElementById("price");
+const dormSelect = document.getElementById("dorm");
 const facultySelect = document.getElementById("faculty");
 const directionSelect = document.getElementById("direction");
 
 let universities = [];
+
+const PRICE_OPTION_LABELS = {
+  low: "До 500 000 ₸",
+  midlow: "500 000 – 800 000 ₸",
+  mid: "800 000 – 1 200 000 ₸",
+  midhigh: "1 200 000 – 1 800 000 ₸",
+  high: "Выше 1 800 000 ₸"
+};
+
+const FACULTY_OPTION_LABELS = {
+  IT: "Математика + Физика",
+  Business: "География + Математика",
+  Engineering: "Физика + Математика",
+  Medicine: "Биология + Химия",
+  Law: "Всемирная история + Основы права",
+  Pedagogy: "Биология + География",
+  Humanities: "История + ЧОП",
+  Journalism: "Творческий экзамен",
+  Architecture: "Математика + Творческий экзамен",
+  Arts: "Творческий экзамен + Творческий экзамен"
+};
+
+const DORM_OPTION_LABELS = {
+  yes: "С общежитием",
+  no: "Без общежития"
+};
 
 function findValueByNameHints(row, hints) {
   const keys = Object.keys(row || {});
@@ -382,6 +411,100 @@ function getElementValue(id) {
   return el ? el.value.trim() : "";
 }
 
+function getCurrentFilterState() {
+  return {
+    region: getElementValue("region"),
+    price: getElementValue("price"),
+    faculty: getElementValue("faculty"),
+    direction: getElementValue("direction"),
+    ent: toNumber(getElementValue("ent")),
+    dorm: getElementValue("dorm"),
+    livingBudget: toNumber(getElementValue("livingBudget")),
+    search: searchInput ? searchInput.value.trim().toLowerCase() : ""
+  };
+}
+
+function getUniversitiesByState(state, ignoredKey = "") {
+  return universities.filter((uni) => {
+    const matchRegion = ignoredKey === "region" || !state.region || uni.region === state.region;
+    const matchPrice = ignoredKey === "price" || !state.price || (Array.isArray(uni.programPriceBuckets) && uni.programPriceBuckets.includes(state.price));
+    const matchFaculty = ignoredKey === "faculty" || !state.faculty || (Array.isArray(uni.facultyTags) && uni.facultyTags.includes(state.faculty));
+    const matchDirection = ignoredKey === "direction" || !state.direction || (Array.isArray(uni.directions) && uni.directions.includes(state.direction));
+    const matchEnt = ignoredKey === "ent" || !Number.isFinite(state.ent) || !Number.isFinite(uni.lastYearScoreValue) || state.ent >= uni.lastYearScoreValue;
+    const matchDorm = ignoredKey === "dorm" || !state.dorm || (state.dorm === "yes" ? uni.dorm : !uni.dorm);
+    const matchLivingBudget = ignoredKey === "livingBudget" || !Number.isFinite(state.livingBudget) || !Number.isFinite(uni.totalLivingValue) || uni.totalLivingValue <= state.livingBudget;
+    const matchSearch = ignoredKey === "search" || !state.search || [uni.name, uni.region, uni.faculty, ...(uni.directions || [])].join(" ").toLowerCase().includes(state.search);
+
+    return matchRegion && matchPrice && matchFaculty && matchDirection && matchEnt && matchDorm && matchLivingBudget && matchSearch;
+  });
+}
+
+function populateSelectWithAvailableOptions(selectElement, values, selectedValue, defaultLabel, labelMap) {
+  if (!selectElement) return;
+
+  selectElement.innerHTML = "";
+
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.textContent = defaultLabel;
+  selectElement.appendChild(defaultOption);
+
+  values.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = labelMap?.[value] || value;
+    selectElement.appendChild(option);
+  });
+
+  if (selectedValue && values.includes(selectedValue)) {
+    selectElement.value = selectedValue;
+  } else {
+    selectElement.value = "";
+  }
+}
+
+function updateDynamicFilterOptions() {
+  const state = getCurrentFilterState();
+
+  const regionOptions = [...new Set(getUniversitiesByState(state, "region")
+    .map((uni) => String(uni.region || "").trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ru"));
+
+  const priceOrder = ["low", "midlow", "mid", "midhigh", "high"];
+  const availablePriceSet = new Set(
+    getUniversitiesByState(state, "price")
+      .flatMap((uni) => Array.isArray(uni.programPriceBuckets) ? uni.programPriceBuckets : [])
+      .filter((bucket) => PRICE_OPTION_LABELS[bucket])
+  );
+  const priceOptions = priceOrder.filter((bucket) => availablePriceSet.has(bucket));
+
+  const facultyOrder = Object.keys(FACULTY_OPTION_LABELS);
+  const availableFacultySet = new Set(
+    getUniversitiesByState(state, "faculty")
+      .flatMap((uni) => Array.isArray(uni.facultyTags) ? uni.facultyTags : [])
+      .filter((tag) => FACULTY_OPTION_LABELS[tag])
+  );
+  const facultyOptions = facultyOrder.filter((tag) => availableFacultySet.has(tag));
+
+  const directionOptions = [...new Set(getUniversitiesByState(state, "direction")
+    .flatMap((uni) => Array.isArray(uni.directions) ? uni.directions : [])
+    .map((direction) => String(direction || "").trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ru"));
+
+  const dormOptions = [];
+  const dormSource = getUniversitiesByState(state, "dorm");
+  if (dormSource.some((uni) => uni.dorm === true)) dormOptions.push("yes");
+  if (dormSource.some((uni) => uni.dorm === false)) dormOptions.push("no");
+
+  populateSelectWithAvailableOptions(regionSelect, regionOptions, state.region, "Все регионы");
+  populateSelectWithAvailableOptions(priceSelect, priceOptions, state.price, "Любая", PRICE_OPTION_LABELS);
+  populateSelectWithAvailableOptions(facultySelect, facultyOptions, state.faculty, "Все комбинации", FACULTY_OPTION_LABELS);
+  populateSelectWithAvailableOptions(directionSelect, directionOptions, state.direction, "Все направления");
+  populateSelectWithAvailableOptions(dormSelect, dormOptions, state.dorm, "Не важно", DORM_OPTION_LABELS);
+}
+
 function populateDirectionFilter(list, selectedFaculty = "", selectedDirection = "") {
   if (!directionSelect) return;
 
@@ -521,6 +644,7 @@ function getFilteredUniversities() {
 }
 
 function filterUniversities() {
+  updateDynamicFilterOptions();
   const filtered = getFilteredUniversities();
   renderUniversities(filtered);
   renderRecommendations(filtered);
@@ -533,7 +657,7 @@ function resetFilters() {
   });
 
   if (searchInput) searchInput.value = "";
-  populateDirectionFilter(universities);
+  updateDynamicFilterOptions();
 
   renderUniversities(universities);
   if (recommendationsBlock) recommendationsBlock.classList.add("hidden");
@@ -556,15 +680,16 @@ async function loadUniversitiesFromApi() {
 if (applyBtn) applyBtn.addEventListener("click", filterUniversities);
 if (resetBtn) resetBtn.addEventListener("click", resetFilters);
 if (searchInput) searchInput.addEventListener("input", filterUniversities);
-if (facultySelect) {
-  facultySelect.addEventListener("change", () => {
-    populateDirectionFilter(universities, getElementValue("faculty"), getElementValue("direction"));
-  });
-}
+["region", "price", "faculty", "direction", "dorm", "ent", "livingBudget"].forEach((id) => {
+  const element = document.getElementById(id);
+  if (!element) return;
+  const eventName = element.tagName === "INPUT" ? "input" : "change";
+  element.addEventListener(eventName, filterUniversities);
+});
 
 loadUniversitiesFromApi()
   .then(() => {
-    populateDirectionFilter(universities, getElementValue("faculty"), getElementValue("direction"));
+    updateDynamicFilterOptions();
     renderUniversities(universities);
     if (recommendationsBlock) recommendationsBlock.classList.add("hidden");
   })
@@ -585,7 +710,7 @@ loadUniversitiesFromApi()
       programPriceBuckets: [],
       totalLivingValue: NaN
     }));
-    populateDirectionFilter(universities, getElementValue("faculty"), getElementValue("direction"));
+    updateDynamicFilterOptions();
     renderUniversities(universities);
   });
 
