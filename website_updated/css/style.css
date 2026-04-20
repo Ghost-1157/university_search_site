@@ -665,6 +665,21 @@ body {
     font-size: 14px;
   }
 
+  .uni-hero-content {
+    padding-top: 116px;
+  }
+
+  .uni-hero h1 {
+    font-size: clamp(34px, 8.5vw, 46px);
+    line-height: 1.08;
+    margin-bottom: 10px;
+  }
+
+  #uniCity {
+    font-size: clamp(20px, 5.2vw, 28px);
+    margin-bottom: 14px;
+  }
+
   .university-card {
     flex-direction: column;
   }
@@ -898,24 +913,49 @@ body {
 .uni-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: linear-gradient(
+    90deg,
+    rgba(15, 45, 160, 0.9) 0%,
+    rgba(20, 55, 190, 0.72) 55%,
+    rgba(20, 55, 190, 0.38) 100%
+  );
 }
 
 .uni-hero-content {
   position: relative;
   z-index: 2;
+  padding-top: 88px;
+  max-width: 900px;
 }
 
 .uni-hero h1 {
-  font-size: 42px;
+  font-size: clamp(42px, 5.2vw, 64px);
+  line-height: 1.06;
+  margin-bottom: 12px;
+  color: #f8fbff;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+#uniCity {
+  font-size: 34px;
+  font-size: clamp(24px, 2.4vw, 36px);
+  line-height: 1.2;
+  margin-bottom: 18px;
+  color: #e7efff;
 }
 
 .uni-tags span {
   display: inline-block;
   margin-right: 10px;
-  background: rgba(255,255,255,0.2);
-  padding: 6px 10px;
-  border-radius: 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: #f3f7ff;
+  font-size: 15px;
+  line-height: 1.35;
 }
 
 /* GRID */
