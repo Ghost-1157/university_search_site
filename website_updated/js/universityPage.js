@@ -166,11 +166,10 @@ function setPageTitle(universityName) {
 }
 
 function populateProgramSelects(programs) {
-  const entSelect = document.getElementById("programSelectEnt");
-  const tuitionSelect = document.getElementById("programSelectTuition");
+  const mainSelect = document.getElementById("programSelectMain");
   const chanceSelect = document.getElementById("chanceProgramSelect");
 
-  [entSelect, tuitionSelect, chanceSelect].forEach((select) => {
+  [mainSelect, chanceSelect].forEach((select) => {
     if (!select) return;
     select.innerHTML = '<option value="">Выберите направление</option>';
 
@@ -253,7 +252,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
     setText("entMinScore", "Минимальный балл: Нет данных");
     setText("entThreshold", "Пороговый балл: Нет данных");
     setText("entGrant", "Гранты: Нет данных");
-    setText("entCompetition", "Конкурс: Нет данных");
     setText("tuitionValue", "Стоимость: Нет данных");
     setText("tuitionGrant", "Гранты: Нет данных");
     return;
@@ -267,7 +265,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   setText("entMinScore", `Минимальный балл: ${entScoreText}`);
   setText("entThreshold", `Пороговый балл: ${entScoreText}`);
   setText("entGrant", "Гранты: Нет данных");
-  setText("entCompetition", "Конкурс: Нет данных");
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
   setText("tuitionGrant", "Гранты: Нет данных");
 }
@@ -395,27 +392,18 @@ function setupLivingModeSwitch(transport) {
 }
 
 function setupProgramLinkedFields(programs, initialIndex = 0) {
-  const entSelect = document.getElementById("programSelectEnt");
-  const tuitionSelect = document.getElementById("programSelectTuition");
+  const mainSelect = document.getElementById("programSelectMain");
 
-  function syncSelection(sourceValue) {
-    const idx = Number.parseInt(sourceValue || "", 10);
-    if (entSelect) entSelect.value = sourceValue;
-    if (tuitionSelect) tuitionSelect.value = sourceValue;
-    updateProgramDependentBlocks(programs, idx);
-  }
-
-  if (entSelect) {
-    entSelect.addEventListener("change", () => syncSelection(entSelect.value));
-  }
-  if (tuitionSelect) {
-    tuitionSelect.addEventListener("change", () => syncSelection(tuitionSelect.value));
+  if (mainSelect) {
+    mainSelect.addEventListener("change", () => {
+      const idx = Number.parseInt(mainSelect.value || "", 10);
+      updateProgramDependentBlocks(programs, idx);
+    });
   }
 
   const safeIndex = Number.isFinite(initialIndex) && initialIndex >= 0 && initialIndex < programs.length ? initialIndex : 0;
   const initialValue = String(safeIndex);
-  if (entSelect) entSelect.value = initialValue;
-  if (tuitionSelect) tuitionSelect.value = initialValue;
+  if (mainSelect) mainSelect.value = initialValue;
   updateProgramDependentBlocks(programs, safeIndex);
 }
 
