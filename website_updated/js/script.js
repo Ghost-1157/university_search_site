@@ -70,7 +70,7 @@ const paginationSummary = document.getElementById("paginationSummary");
 
 // Pagination state
 let currentPage = 1;
-let itemsPerPage = 20;
+let itemsPerPage = 5;
 let lastFilteredList = [];
 
 let universities = [];
