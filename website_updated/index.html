@@ -204,6 +204,35 @@
   <div class="universities-list" id="universitiesList">
     <!-- Карточки будут вставляться через JS -->
   </div>
+
+  <!-- PAGINATION CONTROLS -->
+  <div class="pagination-controls">
+    <div class="pagination-info">
+      <label for="itemsPerPage">Показывать на странице:</label>
+      <select id="itemsPerPage">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+
+    <div class="pagination-buttons">
+      <button id="prevPage" class="pagination-btn" aria-label="Предыдущая страница">← Назад</button>
+      
+      <div class="page-input-group">
+        <span>Страница</span>
+        <input type="number" id="pageNumber" min="1" value="1" aria-label="Номер страницы" />
+        <span id="totalPages">из 1</span>
+      </div>
+      
+      <button id="nextPage" class="pagination-btn" aria-label="Следующая страница">Далее →</button>
+    </div>
+
+    <div class="pagination-summary">
+      <span id="paginationSummary">Показано: 0 из 0</span>
+    </div>
+  </div>
 </section>
 
     </div>

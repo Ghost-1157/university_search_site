@@ -60,6 +60,19 @@ const dormSelect = document.getElementById("dorm");
 const facultySelect = document.getElementById("faculty");
 const directionSelect = document.getElementById("direction");
 
+// Pagination elements
+const itemsPerPageSelect = document.getElementById("itemsPerPage");
+const pageNumberInput = document.getElementById("pageNumber");
+const prevPageBtn = document.getElementById("prevPage");
+const nextPageBtn = document.getElementById("nextPage");
+const totalPagesSpan = document.getElementById("totalPages");
+const paginationSummary = document.getElementById("paginationSummary");
+
+// Pagination state
+let currentPage = 1;
+let itemsPerPage = 20;
+let lastFilteredList = [];
+
 let universities = [];
 
 const PRICE_OPTION_LABELS = {
@@ -572,15 +585,37 @@ function renderRecommendations(list) {
 function renderUniversities(list) {
   if (!universitiesList || !resultsCount) return;
 
+  // Store the full filtered list for pagination
+  lastFilteredList = list;
+  currentPage = 1;
+  
+  // Update pagination controls
+  updatePaginationControls(list);
+  
+  // Render the first page
+  renderPage(list, currentPage);
+}
+
+function renderPage(list, pageNum) {
+  if (!universitiesList) return;
+
   universitiesList.innerHTML = "";
 
   if (list.length === 0) {
     universitiesList.innerHTML = "<p>Нет результатов по заданным фильтрам.</p>";
     resultsCount.textContent = "Найдено: 0";
+    updatePaginationSummary(0, 0, 0);
     return;
   }
 
-  list.forEach((uni) => {
+  // Calculate pagination
+  const totalPages = Math.ceil(list.length / itemsPerPage);
+  const startIndex = (pageNum - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, list.length);
+  const pageItems = list.slice(startIndex, endIndex);
+
+  // Render page items
+  pageItems.forEach((uni) => {
     const card = document.createElement("div");
     card.className = "university-card";
     const fallbackMark = String(uni.short || uni.name).slice(0, 3).replace(/['"<>]/g, "");
@@ -622,7 +657,52 @@ function renderUniversities(list) {
     universitiesList.appendChild(card);
   });
 
+  // Update results count and pagination summary
   resultsCount.textContent = `Найдено: ${list.length}`;
+  updatePaginationSummary(startIndex + 1, endIndex, list.length);
+  
+  // Update page number input
+  pageNumberInput.value = pageNum;
+  totalPagesSpan.textContent = `из ${totalPages}`;
+}
+
+function updatePaginationControls(list) {
+  const totalPages = Math.ceil(list.length / itemsPerPage);
+  const isFirstPage = currentPage === 1;
+  const isLastPage = currentPage >= totalPages;
+
+  // Enable/disable pagination buttons
+  prevPageBtn.disabled = isFirstPage;
+  nextPageBtn.disabled = isLastPage || list.length === 0;
+  pageNumberInput.max = Math.max(1, totalPages);
+
+  // Update total pages display
+  totalPagesSpan.textContent = `из ${totalPages}`;
+}
+
+function updatePaginationSummary(from, to, total) {
+  if (total === 0) {
+    paginationSummary.textContent = "Показано: 0 из 0";
+  } else {
+    paginationSummary.textContent = `Показано: ${from}–${to} из ${total}`;
+  }
+}
+
+function goToPage(pageNum) {
+  const totalPages = Math.ceil(lastFilteredList.length / itemsPerPage);
+  
+  // Validate page number
+  if (pageNum < 1 || pageNum > totalPages || !Number.isInteger(pageNum)) {
+    pageNumberInput.value = currentPage;
+    return;
+  }
+  
+  currentPage = pageNum;
+  renderPage(lastFilteredList, currentPage);
+  updatePaginationControls(lastFilteredList);
+  
+  // Scroll to top of list
+  universitiesList?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function getFilteredUniversities() {
@@ -692,6 +772,51 @@ if (searchInput) searchInput.addEventListener("input", filterUniversities);
   const eventName = element.tagName === "INPUT" ? "input" : "change";
   element.addEventListener(eventName, filterUniversities);
 });
+
+// Pagination event listeners
+if (itemsPerPageSelect) {
+  itemsPerPageSelect.addEventListener("change", (e) => {
+    itemsPerPage = parseInt(e.target.value, 10);
+    currentPage = 1; // Reset to first page when changing items per page
+    renderUniversities(lastFilteredList);
+  });
+}
+
+if (prevPageBtn) {
+  prevPageBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+    }
+  });
+}
+
+if (nextPageBtn) {
+  nextPageBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(lastFilteredList.length / itemsPerPage);
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+    }
+  });
+}
+
+if (pageNumberInput) {
+  pageNumberInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const pageNum = parseInt(pageNumberInput.value, 10);
+      goToPage(pageNum);
+    }
+  });
+  
+  pageNumberInput.addEventListener("blur", () => {
+    const pageNum = parseInt(pageNumberInput.value, 10);
+    goToPage(pageNum);
+  });
+}
+
+// Initialize items per page from select
+if (itemsPerPageSelect) {
+  itemsPerPage = parseInt(itemsPerPageSelect.value, 10);
+}
 
 loadUniversitiesFromApi()
   .then(() => {

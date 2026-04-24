@@ -813,6 +813,142 @@ body {
   text-decoration: underline;
 }
 
+/* PAGINATION */
+.pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination-info label {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.pagination-info select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #1f2937;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.pagination-info select:hover {
+  border-color: #2563eb;
+  background: #f8fbff;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination-btn {
+  padding: 8px 14px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.page-input-group input {
+  width: 50px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  color: #1f2937;
+  transition: 0.2s;
+}
+
+.page-input-group input:hover {
+  border-color: #2563eb;
+}
+
+.page-input-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.pagination-summary {
+  font-size: 14px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+@media (max-width: 992px) {
+  .pagination-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .pagination-info,
+  .pagination-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination-buttons {
+    flex-direction: column;
+  }
+
+  .page-input-group {
+    justify-content: center;
+  }
+
+  .pagination-summary {
+    text-align: center;
+  }
+
+  .pagination-btn,
+  .pagination-info select {
+    width: 100%;
+  }
+}
+
 /* FOOTER */
 .footer {
   background: #0f172a;
