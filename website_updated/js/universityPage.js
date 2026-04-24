@@ -40,6 +40,32 @@ function formatMoney(value) {
   return "Нет данных";
 }
 
+function formatMoneyOrText(value) {
+  const numeric = toNumber(value);
+  if (Number.isFinite(numeric)) {
+    return `${Math.round(numeric).toLocaleString("ru-RU")} KZT`;
+  }
+
+  const text = String(value || "").trim();
+  return text || "Нет данных";
+}
+
+function pickExactColumn(row, columnName) {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+
+  if (Object.prototype.hasOwnProperty.call(row, columnName)) {
+    return row[columnName] ?? "";
+  }
+
+  const matchedKey = Object.keys(row).find(
+    (key) => String(key).replace(/\s+/g, "") === columnName
+  );
+
+  return matchedKey ? row[matchedKey] ?? "" : "";
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -52,6 +78,12 @@ function escapeHtml(value) {
 function normalizeCorrectedRow(row) {
   const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
   const passScore = pickValue(row, ["pass", "ent", "threshold", "min score", "minimum", "col_16"], 15);
+  const transportRaw = pickExactColumn(row, "col_17") || pickValue(row, ["transport"], 16);
+  const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
+  const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
+  const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
+  const leisureRaw = pickExactColumn(row, "col_20") || pickValue(row, ["leisure"], 20);
+  const totalRaw = pickExactColumn(row, "col_21") || pickValue(row, ["sum", "total"], 21);
 
   return {
     name: String(pickValue(row, ["university_name", "university", "name", "title", "col"], 0) || ""),
@@ -69,12 +101,12 @@ function normalizeCorrectedRow(row) {
     language: String(pickValue(row, ["language", "lang", "col_11"], 10) || ""),
     duration: String(pickValue(row, ["duration", "term", "length", "col_12"], 11) || ""),
     tuitionRaw: pickValue(row, ["tuition", "price", "cost", "fee", "col_13"], 12),
-    transport: pickValue(row, ["transport", "col_17"], 16),
-    apartment: pickValue(row, ["apartment", "flat", "room", "col_1"], 17),
-    food: pickValue(row, ["food", "col_18"], 18),
-    dormitory: pickValue(row, ["dormitory", "hostel_cost", "col_19"], 19),
-    leisure: pickValue(row, ["leisure", "col_20"], 20),
-    total: pickValue(row, ["sum", "total", "col_21"], 21),
+    transport: transportRaw,
+    apartment: apartmentRaw,
+    food: foodRaw,
+    dormitory: dormitoryRaw,
+    leisure: leisureRaw,
+    total: totalRaw,
     link: String(pickValue(row, ["link", "url", "col_14"], 13) || ""),
     row
   };
@@ -340,8 +372,8 @@ function renderMainBlocks(universityName, programs, transportRows) {
   setHtml("uniWebsite", `Сайт: ${firstProgram?.website ? `<a href="${escapeHtml(firstProgram.website)}" target="_blank" rel="noopener noreferrer">${escapeHtml(firstProgram.website)}</a>` : "Нет данных"}`);
   setHtml("uniProgramLink", `Ссылка на программу: ${firstProgram?.link ? `<a href="${escapeHtml(firstProgram.link)}" target="_blank" rel="noopener noreferrer">Открыть</a>` : "Нет данных"}`);
 
-  setText("dormYearly", `Общежитие: ${formatMoney(firstTransport?.dormitory)}`);
-  setText("apartmentCost", `Аренда: ${formatMoney(firstTransport?.apartment)}`);
+  setText("dormYearly", `Общежитие: ${formatMoneyOrText(firstTransport?.dormitory)}`);
+  setText("apartmentCost", `Аренда: ${formatMoneyOrText(firstTransport?.apartment)}`);
   setText("livingTotal", `Итого расходов/мес: ${formatMoney(firstTransport?.total)}`);
 
   setText("foodCost", `Питание: ${formatMoney(firstTransport?.food)}`);
@@ -354,8 +386,10 @@ function renderMainBlocks(universityName, programs, transportRows) {
 function setupLivingModeSwitch(transport) {
   const dormRadio = document.getElementById("livingModeDorm");
   const apartmentRadio = document.getElementById("livingModeApartment");
+  const dormLine = document.getElementById("dormYearly");
+  const apartmentLine = document.getElementById("apartmentCost");
 
-  if (!dormRadio || !apartmentRadio) {
+  if (!dormRadio || !apartmentRadio || !dormLine || !apartmentLine) {
     return;
   }
 
@@ -381,6 +415,9 @@ function setupLivingModeSwitch(transport) {
   function renderTotal() {
     const mode = apartmentRadio.checked ? "apartment" : "dorm";
     const total = computeTotal(mode);
+
+    dormLine.style.display = mode === "dorm" ? "block" : "none";
+    apartmentLine.style.display = mode === "apartment" ? "block" : "none";
     setText("livingTotal", `Итого расходов/мес: ${formatMoney(total)}`);
   }
 
