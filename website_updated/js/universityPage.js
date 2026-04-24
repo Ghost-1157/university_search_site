@@ -253,7 +253,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
     setText("entThreshold", "Пороговый балл: Нет данных");
     setText("entGrant", "Гранты: Нет данных");
     setText("tuitionValue", "Стоимость: Нет данных");
-    setText("tuitionGrant", "Гранты: Нет данных");
     return;
   }
 
@@ -266,7 +265,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   setText("entThreshold", `Пороговый балл: ${entScoreText}`);
   setText("entGrant", "Гранты: Нет данных");
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
-  setText("tuitionGrant", "Гранты: Нет данных");
 }
 
 function getChanceByScoreGap(scoreGap) {
