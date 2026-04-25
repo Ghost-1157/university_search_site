@@ -16,6 +16,18 @@ function pickValue(row, hints, position) {
   return getValueByPosition(row, position);
 }
 
+function pickFirstNonEmpty(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    if (typeof value === "number") {
+      if (Number.isFinite(value)) return value;
+      continue;
+    }
+    if (String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
 function normalizeName(value) {
   return String(value || "")
     .toLowerCase()
@@ -50,6 +62,16 @@ function formatMoneyOrText(value) {
   return text || "Нет данных";
 }
 
+function formatCountOrText(value) {
+  const numeric = toNumber(value);
+  if (Number.isFinite(numeric)) {
+    return String(Math.round(numeric));
+  }
+
+  const text = String(value || "").trim();
+  return text || "Нет данных";
+}
+
 function pickExactColumn(row, columnName) {
   if (!row || typeof row !== "object") {
     return "";
@@ -78,6 +100,11 @@ function escapeHtml(value) {
 function normalizeCorrectedRow(row) {
   const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
   const passScore = pickValue(row, ["pass", "ent", "threshold", "min score", "minimum", "col_16"], 15);
+  const grantRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "contests"),
+    pickExactColumn(row, "col_22"),
+    pickValue(row, ["contest", "konkurs", "grant", "grants"], 21)
+  );
   const transportRaw = pickExactColumn(row, "col_17") || pickValue(row, ["transport"], 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
@@ -97,6 +124,8 @@ function normalizeCorrectedRow(row) {
     programName: String(programName || "Не указано"),
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
+    grantValue: grantRaw,
+    grantText: formatCountOrText(grantRaw),
     degree: String(pickValue(row, ["degree", "qualification", "level", "col_10"], 9) || ""),
     language: String(pickValue(row, ["language", "lang", "col_11"], 10) || ""),
     duration: String(pickValue(row, ["duration", "term", "length", "col_12"], 11) || ""),
@@ -295,7 +324,7 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   const entScoreText = resolveEntScoreText(current);
   setText("entMinScore", `Минимальный балл: ${entScoreText}`);
   setText("entThreshold", `Пороговый балл: ${entScoreText}`);
-  setText("entGrant", "Гранты: Нет данных");
+  setText("entGrant", `Гранты: ${current.grantText || "Нет данных"}`);
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
 }
 
