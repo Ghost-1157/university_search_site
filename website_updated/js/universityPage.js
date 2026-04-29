@@ -126,6 +126,17 @@ function pickExactColumn(row, columnName) {
   return matchedKey ? row[matchedKey] ?? "" : "";
 }
 
+function looksLikeProgramCode(value) {
+  const normalized = String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\u0410-\u042F]/g, "");
+  return /^[56][AB\u0412]\d{5}$/.test(normalized);
+}
+
+function looksLikeUrl(value) {
+  return /^https?:\/\//i.test(String(value || "").trim());
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -136,61 +147,66 @@ function escapeHtml(value) {
 }
 
 function normalizeCorrectedRow(row) {
-  const col14Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_14")));
-  const col15Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_15")));
-  const col16Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_16")));
-  const col17Digits = String(pickExactColumn(row, "col_17") || "").replace(/\D/g, "").length;
-  const contestsNumeric = Number.isFinite(toNumber(pickExactColumn(row, "contests")));
+  const c7 = pickExactColumn(row, "col_7");
+  const c8 = pickExactColumn(row, "col_8");
+  const c9 = pickExactColumn(row, "col_9");
+  const c10 = pickExactColumn(row, "col_10");
+  const c11 = pickExactColumn(row, "col_11");
+  const c12 = pickExactColumn(row, "col_12");
+  const c13 = pickExactColumn(row, "col_13");
+  const c14 = pickExactColumn(row, "col_14");
+  const c15 = pickExactColumn(row, "col_15");
+  const c16 = pickExactColumn(row, "col_16");
+  const c17 = pickExactColumn(row, "col_17");
+  const contests = pickExactColumn(row, "contests");
 
-  // Accept both admission layouts found in the merged table.
-  const admissionSchema = (col14Numeric && col15Numeric && col16Numeric && col17Digits >= 4)
-    || (col16Numeric && col17Digits >= 4 && contestsNumeric);
+  const sourceSchema = looksLikeProgramCode(c7) && Number.isFinite(toNumber(c14)) && Number.isFinite(toNumber(c15));
+  const shiftedSchema = looksLikeProgramCode(c8) && looksLikeUrl(c14) && Number.isFinite(toNumber(c16));
+  const schemaType = sourceSchema ? "source" : shiftedSchema ? "shifted" : "legacy";
 
-  const programCode = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_7"), pickValue(row, ["code"], 6))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_8"), pickValue(row, ["code"], 7));
+  const programCode = sourceSchema
+    ? pickFirstNonEmpty(c7, pickValue(row, ["code"], 6))
+    : shiftedSchema
+      ? pickFirstNonEmpty(c8, pickValue(row, ["code"], 7))
+      : pickFirstNonEmpty(c7, c8, pickValue(row, ["code"], 7));
 
-  const programName = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_8"), pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 7))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_7"), pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 6));
+  const programName = sourceSchema
+    ? pickFirstNonEmpty(c8, c9, pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 7))
+    : shiftedSchema
+      ? pickFirstNonEmpty(c9, c8, pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 8))
+      : pickFirstNonEmpty(c8, c9, pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 8));
 
-  const degree = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_9"), pickValue(row, ["degree", "qualification", "level"], 8))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_9"), pickValue(row, ["degree", "qualification", "level"], 8));
+  const degree = sourceSchema ? c9 : shiftedSchema ? c10 : pickValue(row, ["degree", "qualification", "level", "col_10"], 9);
+  const language = sourceSchema ? c10 : shiftedSchema ? c11 : pickValue(row, ["language", "lang", "col_11"], 10);
+  const duration = sourceSchema ? c11 : shiftedSchema ? c12 : pickValue(row, ["duration", "term", "length", "col_12"], 11);
+  const tuitionRaw = sourceSchema ? c12 : shiftedSchema ? c13 : pickValue(row, ["tuition", "price", "cost", "fee", "col_13"], 12);
+  const link = sourceSchema ? c13 : shiftedSchema ? c14 : pickValue(row, ["link", "url", "col_14"], 13);
 
-  const language = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_10"), pickValue(row, ["language", "lang"], 9))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_10"), pickValue(row, ["language", "lang"], 9));
+  const passScore = sourceSchema
+    ? pickFirstNonEmpty(c14, pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 13))
+    : shiftedSchema
+      ? pickFirstNonEmpty(c16, pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15))
+      : pickFirstNonEmpty(c14, c16, pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15));
 
-  const duration = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_11"), pickValue(row, ["duration", "term", "length"], 10))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_11"), pickValue(row, ["duration", "term", "length"], 10));
+  const grantRaw = sourceSchema
+    ? pickFirstNonEmpty(c15, contests, pickValue(row, ["grant", "grants", "budget"], 14))
+    : shiftedSchema
+      ? pickFirstNonEmpty(contests, c15, pickValue(row, ["grant", "grants", "budget"], 14))
+      : pickFirstNonEmpty(contests, c15, pickValue(row, ["grant", "grants", "budget"], 14));
 
-  const tuitionRaw = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_12"), pickValue(row, ["tuition", "price", "cost", "fee"], 11))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_12"), pickValue(row, ["tuition", "price", "cost", "fee"], 11));
+  const applicantRaw = sourceSchema
+    ? pickFirstNonEmpty(c16, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15))
+    : shiftedSchema
+      ? pickFirstNonEmpty(c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16))
+      : pickFirstNonEmpty(c16, c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16));
 
-  const link = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_13"), pickValue(row, ["link", "url"], 12))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_13"), pickValue(row, ["link", "url"], 12));
+  const scoreRangeRaw = sourceSchema
+    ? pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16))
+    : shiftedSchema
+      ? pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16))
+      : pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16));
 
-  const passScore = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_14"), pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 13))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_16"), pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15));
-
-  const grantRaw = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_15"), pickExactColumn(row, "contests"), pickValue(row, ["grant", "grants", "budget"], 14))
-    : pickFirstNonEmpty(pickExactColumn(row, "contests"), pickExactColumn(row, "col_15"), pickValue(row, ["grant", "grants", "budget"], 14));
-
-  const applicantRaw = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_16"), pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16));
-
-  const scoreRangeRaw = admissionSchema
-    ? pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["score range", "range", "scores"], 16))
-    : pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["score range", "range", "scores"], 16));
-
-  const transportRaw = pickValue(row, ["transport"], admissionSchema ? 17 : 16);
+  const transportRaw = pickValue(row, ["transport"], shiftedSchema ? 17 : 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
   const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
@@ -198,14 +214,14 @@ function normalizeCorrectedRow(row) {
   const totalRaw = pickExactColumn(row, "col_21") || pickValue(row, ["sum", "total"], 21);
 
   return {
-    schemaType: admissionSchema ? "admission" : "legacy",
+    schemaType,
     name: String(pickValue(row, ["university_name", "university", "name", "title", "col"], 0) || ""),
     city: String(pickValue(row, ["region", "city", "location", "col_2"], 1) || ""),
     type: String(pickValue(row, ["type", "ownership", "status", "col_3"], 2) || ""),
     email: String(pickValue(row, ["email", "mail", "col_4"], 3) || ""),
     phone: String(pickValue(row, ["phone", "contact", "tel", "col_5"], 4) || ""),
     website: String(pickValue(row, ["website", "site", "url", "col_6"], 5) || ""),
-    subjectCombination: String(pickValue(row, ["subject", "profile", "col_6"], admissionSchema ? 5 : 6) || ""),
+    subjectCombination: String(sourceSchema ? pickFirstNonEmpty(pickExactColumn(row, "col_6"), pickValue(row, ["subject", "profile"], 5)) : pickFirstNonEmpty(c7, pickValue(row, ["subject", "profile", "col_7"], 6)) || ""),
     programCode: String(programCode || ""),
     programName: String(programName || "Не указано"),
     passScoreValue: toNumber(passScore),
@@ -218,9 +234,9 @@ function normalizeCorrectedRow(row) {
     applicantCountText: formatCountOrText(applicantRaw),
     scoreRangeValue: scoreRangeRaw,
     scoreRangeText: formatScoreRange(scoreRangeRaw),
-    degree,
-    language,
-    duration,
+    degree: String(degree || ""),
+    language: String(language || ""),
+    duration: String(duration || ""),
     tuitionRaw,
     transport: transportRaw,
     apartment: apartmentRaw,
@@ -268,6 +284,38 @@ function findRowsByCanonicalName(rows, canonicalName) {
   }
 
   return rows.filter((row) => normalizeName(row.name) === canonical);
+}
+
+function pickBestProgramRows(rows) {
+  const rank = { source: 3, shifted: 2, legacy: 1 };
+  const byKey = new Map();
+
+  rows.forEach((row) => {
+    const codeKey = normalizeName(row.programCode || row.programName || "");
+    const key = `${normalizeName(row.name)}|${codeKey}`;
+    const prev = byKey.get(key);
+    if (!prev) {
+      byKey.set(key, row);
+      return;
+    }
+
+    const prevRank = rank[prev.schemaType] || 0;
+    const nextRank = rank[row.schemaType] || 0;
+    if (nextRank > prevRank) {
+      byKey.set(key, row);
+      return;
+    }
+
+    if (nextRank === prevRank) {
+      const prevScore = Number.isFinite(toNumber(prev.passScoreValue)) ? 1 : 0;
+      const nextScore = Number.isFinite(toNumber(row.passScoreValue)) ? 1 : 0;
+      if (nextScore > prevScore) {
+        byKey.set(key, row);
+      }
+    }
+  });
+
+  return Array.from(byKey.values());
 }
 
 function getRequestedUniversityName() {
@@ -397,8 +445,9 @@ function resolveEntScoreText(program) {
 
   const row = program?.row || {};
   const fallbackRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "col_14"),
     pickExactColumn(row, "col_16"),
-    pickValue(row, ["pass", "ent", "threshold", "minimum", "min"], 15),
+    pickValue(row, ["pass", "ent", "threshold", "minimum", "min"], 13),
     String(program?.scoreRangeText || "").split("-")[0]
   );
   const fallbackNumeric = toNumber(fallbackRaw);
@@ -663,13 +712,13 @@ async function loadUniversityPage() {
 
   const unifiedPayload = await unifiedResponse.json();
   const normalizedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
-  const admissionRows = normalizedRows.filter((row) => row.schemaType === "admission");
+  const admissionRows = normalizedRows.filter((row) => row.schemaType === "source" || row.schemaType === "shifted");
   const unifiedRows = admissionRows.length > 0 ? admissionRows : normalizedRows;
 
   const canonicalName = resolveCanonicalUniversityName(unifiedRows, targetName)
     || targetName;
 
-  const filteredPrograms = findRowsByCanonicalName(unifiedRows, canonicalName);
+  const filteredPrograms = pickBestProgramRows(findRowsByCanonicalName(unifiedRows, canonicalName));
   const filteredTransport = filteredPrograms;
   const initialProgramIndex = findProgramIndexByDirection(filteredPrograms, targetDirection);
 
