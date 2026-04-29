@@ -98,16 +98,14 @@ function formatScoreRange(value) {
   return text;
 }
 
-function formatCompetitionText(applicantsValue, grantsValue) {
+function formatCompetitionText(applicantsValue) {
   const applicants = toNumber(applicantsValue);
-  const grants = toNumber(grantsValue);
 
-  if (!Number.isFinite(applicants) || !Number.isFinite(grants) || grants <= 0) {
+  if (!Number.isFinite(applicants)) {
     return "Нет данных";
   }
 
-  const ratio = applicants / grants;
-  return `${ratio.toFixed(1)} заявки на место`;
+  return `${Math.round(applicants).toLocaleString("ru-RU")} заявок`;
 }
 
 function pickExactColumn(row, columnName) {
@@ -200,11 +198,7 @@ function normalizeCorrectedRow(row) {
       ? pickFirstNonEmpty(c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16))
       : pickFirstNonEmpty(c16, c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16));
 
-  const scoreRangeRaw = sourceSchema
-    ? pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16))
-    : shiftedSchema
-      ? pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16))
-      : pickFirstNonEmpty(c17, pickValue(row, ["score range", "range", "scores"], 16));
+  const scoreRangeRaw = c17;
 
   const transportRaw = pickValue(row, ["transport"], shiftedSchema ? 17 : 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
@@ -227,7 +221,7 @@ function normalizeCorrectedRow(row) {
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
     contestValue: applicantRaw,
-    contestText: formatCompetitionText(applicantRaw, grantRaw),
+    contestText: formatCompetitionText(applicantRaw),
     grantValue: grantRaw,
     grantText: formatCountOrText(grantRaw),
     applicantCountValue: applicantRaw,
@@ -704,32 +698,39 @@ async function loadUniversityPage() {
   const targetName = getRequestedUniversityName();
   const targetDirection = getRequestedDirectionName();
 
-  const unifiedResponse = await fetch("/api/universities?limit=1000&offset=0");
+  const [unifiedResponse, transportResponse] = await Promise.all([
+    fetch("/api/universities?limit=1000&offset=0"),
+    fetch("/api/university-transport-food-home?limit=1000&offset=0")
+  ]);
 
   if (!unifiedResponse.ok) {
     throw new Error("Не удалось загрузить данные");
   }
 
   const unifiedPayload = await unifiedResponse.json();
+  const transportPayload = transportResponse.ok ? await transportResponse.json() : { rows: [] };
   const normalizedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
+  const normalizedTransportRows = (Array.isArray(transportPayload.rows) ? transportPayload.rows : []).map(normalizeCorrectedRow);
   const admissionRows = normalizedRows.filter((row) => row.schemaType === "source" || row.schemaType === "shifted");
   const unifiedRows = admissionRows.length > 0 ? admissionRows : normalizedRows;
+  const transportRows = normalizedTransportRows.length > 0 ? normalizedTransportRows : unifiedRows;
 
   const canonicalName = resolveCanonicalUniversityName(unifiedRows, targetName)
     || targetName;
 
   const filteredPrograms = pickBestProgramRows(findRowsByCanonicalName(unifiedRows, canonicalName));
-  const filteredTransport = filteredPrograms;
+  const filteredTransport = pickBestProgramRows(findRowsByCanonicalName(transportRows, canonicalName));
+  const resolvedTransportRows = filteredTransport.length > 0 ? filteredTransport : filteredPrograms;
   const initialProgramIndex = findProgramIndexByDirection(filteredPrograms, targetDirection);
 
   const resolvedName = canonicalName || filteredPrograms[0]?.name || filteredTransport[0]?.name || "Университет";
 
-  renderMainBlocks(resolvedName, filteredPrograms, filteredTransport);
+  renderMainBlocks(resolvedName, filteredPrograms, resolvedTransportRows);
   populateProgramSelects(filteredPrograms);
   renderProgramList(filteredPrograms);
   setupProgramLinkedFields(filteredPrograms, initialProgramIndex);
-  setupChanceCalculator(filteredPrograms, filteredTransport[0], initialProgramIndex);
-  renderRawData(filteredPrograms, filteredTransport);
+  setupChanceCalculator(filteredPrograms, resolvedTransportRows[0], initialProgramIndex);
+  renderRawData(filteredPrograms, resolvedTransportRows);
 }
 
 loadUniversityPage().catch(() => {

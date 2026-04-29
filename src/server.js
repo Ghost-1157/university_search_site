@@ -4,6 +4,7 @@ const cors = require("cors");
 const path = require("path");
 const db = require("./db");
 const correctedService = require("./universityTableService");
+const transportService = require("./universityTransportFoodHomeService");
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -99,7 +100,7 @@ app.get("/website-updated", (_req, res) => {
 
 registerTableRoutes("/api/universities", correctedService);
 registerTableRoutes("/api/university-table-corrected", correctedService);
-registerTableRoutes("/api/university-transport-food-home", correctedService);
+registerTableRoutes("/api/university-transport-food-home", transportService);
 
 app.get("/health", async (_req, res) => {
   try {
