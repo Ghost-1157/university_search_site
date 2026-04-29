@@ -629,13 +629,14 @@ function setupChanceCalculator(programs, transport, initialIndex = 0) {
     }
 
     const requiredScore = toNumber(selectedProgram?.passScoreValue);
+    const entDisplayText = Number.isFinite(requiredScore) ? Math.round(requiredScore) : resolveEntScoreText(selectedProgram);
     const scoreGap = entValue - requiredScore;
     const gapText = `${scoreGap >= 0 ? "+" : ""}${Math.round(scoreGap)}`;
 
     setText("chanceResult", `Шанс поступления: ${getChanceLabel(chanceScore)} (${Math.round(chanceScore)}%)`);
     setText(
       "chanceDetails",
-      `ЕНТ: ${Math.round(entValue)} • До проходного: ${gapText} • Конкурс: ${selectedProgram?.contestText || "Нет данных"} • Гранты: ${selectedProgram?.grantText || "Нет данных"}`
+      `ЕНТ: ${entDisplayText} • До проходного: ${gapText} • Конкурс: ${selectedProgram?.contestText || "Нет данных"} • Гранты: ${selectedProgram?.grantText || "Нет данных"}`
     );
   }
 
