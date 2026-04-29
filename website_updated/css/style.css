@@ -1169,6 +1169,14 @@ body {
   margin-top: 2px;
 }
 
+.chance-result-meta {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .living-switch {
   display: inline-flex;
   border: 1px solid #d1d5db;
