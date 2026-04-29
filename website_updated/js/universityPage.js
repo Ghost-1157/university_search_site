@@ -99,32 +99,18 @@ function escapeHtml(value) {
 
 function normalizeCorrectedRow(row) {
   const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
-  const passScore = pickFirstNonEmpty(
-    pickExactColumn(row, "col_14"),
-    pickValue(row, ["pass", "ent", "threshold", "min score", "minimum", "score"], 15)
-  );
+  const passScore = pickValue(row, ["pass", "ent", "threshold", "min score", "minimum", "col_16"], 15);
   const grantRaw = pickFirstNonEmpty(
     pickExactColumn(row, "contests"),
-    pickExactColumn(row, "col_15"),
-    pickValue(row, ["contest", "konkurs", "grant", "grants", "scholarship"], 16)
+    pickExactColumn(row, "col_22"),
+    pickValue(row, ["contest", "konkurs", "grant", "grants"], 21)
   );
-  const applicantCountRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_16"),
-    pickValue(row, ["applicant", "application", "apply", "student", "admission"], 17)
-  );
-  const scoreRangeRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_17"),
-    pickValue(row, ["score range", "range", "scores", "entrance range"], 18)
-  );
-  const transportRaw = pickExactColumn(row, "col_18") || pickValue(row, ["transport"], 19);
+  const transportRaw = pickExactColumn(row, "col_17") || pickValue(row, ["transport"], 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
-  const foodRaw = pickExactColumn(row, "col_19") || pickValue(row, ["food"], 20);
-  const dormitoryRaw = pickExactColumn(row, "col_20") || pickValue(row, ["dormitory", "hostel_cost"], 21);
-  const leisureRaw = pickExactColumn(row, "col_21") || pickValue(row, ["leisure"], 22);
-  const totalRaw = pickExactColumn(row, "col_22") || pickValue(row, ["sum", "total"], 23);
-
-  const grantValue = toNumber(grantRaw);
-  const applicantCountValue = toNumber(applicantCountRaw);
+  const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
+  const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
+  const leisureRaw = pickExactColumn(row, "col_20") || pickValue(row, ["leisure"], 20);
+  const totalRaw = pickExactColumn(row, "col_21") || pickValue(row, ["sum", "total"], 21);
 
   return {
     name: String(pickValue(row, ["university_name", "university", "name", "title", "col"], 0) || ""),
@@ -140,9 +126,6 @@ function normalizeCorrectedRow(row) {
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
     grantValue: grantRaw,
     grantText: formatCountOrText(grantRaw),
-    applicantCountValue,
-    applicantCountText: formatCountOrText(applicantCountRaw),
-    scoreRangeText: String(scoreRangeRaw || "").trim() || "Нет данных",
     degree: String(pickValue(row, ["degree", "qualification", "level", "col_10"], 9) || ""),
     language: String(pickValue(row, ["language", "lang", "col_11"], 10) || ""),
     duration: String(pickValue(row, ["duration", "term", "length", "col_12"], 11) || ""),
@@ -316,10 +299,7 @@ function resolveEntScoreText(program) {
   }
 
   const row = program?.row || {};
-  const fallbackRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_14"),
-    pickValue(row, ["pass", "ent", "threshold", "minimum", "min", "score"], 15)
-  );
+  const fallbackRaw = pickValue(row, ["col_16", "pass", "ent", "threshold", "minimum", "min"], 15);
   const fallbackNumeric = toNumber(fallbackRaw);
   if (Number.isFinite(fallbackNumeric)) {
     return String(Math.round(fallbackNumeric));
@@ -331,10 +311,8 @@ function resolveEntScoreText(program) {
 function updateProgramDependentBlocks(programs, selectedIndex) {
   if (programs.length === 0) {
     setText("entMinScore", "Минимальный балл: Нет данных");
+    setText("entThreshold", "Пороговый балл: Нет данных");
     setText("entGrant", "Гранты: Нет данных");
-    setText("entApplicants", "Заявок на факультет: Нет данных");
-    setText("entScoreRange", "Диапазон баллов: Нет данных");
-    setText("entCompetition", "Конкурс: Нет данных");
     setText("tuitionValue", "Стоимость: Нет данных");
     return;
   }
@@ -344,19 +322,9 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
 
   const tuitionText = formatMoney(current.tuitionRaw);
   const entScoreText = resolveEntScoreText(current);
-  const grantText = current.grantText || "Нет данных";
-  const applicantsText = current.applicantCountText || "Нет данных";
-  const scoreRangeText = current.scoreRangeText || "Нет данных";
-  const grantCount = toNumber(current.grantValue);
-  const applicantCount = toNumber(current.applicantCountValue);
-  const competitionText = Number.isFinite(grantCount) && grantCount > 0 && Number.isFinite(applicantCount)
-    ? `${(applicantCount / grantCount).toFixed(1)} заявок на грант`
-    : "Нет данных";
   setText("entMinScore", `Минимальный балл: ${entScoreText}`);
-  setText("entGrant", `Грантовых мест: ${grantText}`);
-  setText("entApplicants", `Заявок на факультет: ${applicantsText}`);
-  setText("entScoreRange", `Диапазон баллов: ${scoreRangeText}`);
-  setText("entCompetition", `Конкурс: ${competitionText}`);
+  setText("entThreshold", `Пороговый балл: ${entScoreText}`);
+  setText("entGrant", `Гранты: ${current.grantText || "Нет данных"}`);
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
 }
 
@@ -390,26 +358,14 @@ function setupChanceCalculator(programs, transport, initialIndex = 0) {
     const selectedIndex = Number.parseInt(programSelect?.value || "", 10);
     const selectedProgram = Number.isFinite(selectedIndex) && programs[selectedIndex] ? programs[selectedIndex] : programs[0];
     const requiredScore = toNumber(selectedProgram?.passScoreValue);
-    const grantCount = toNumber(selectedProgram?.grantValue);
-    const applicantCount = toNumber(selectedProgram?.applicantCountValue);
-    const scoreRangeText = String(selectedProgram?.scoreRangeText || "Нет данных").trim() || "Нет данных";
-    const competitionText = Number.isFinite(grantCount) && grantCount > 0 && Number.isFinite(applicantCount)
-      ? `${(applicantCount / grantCount).toFixed(1)} заявок на грант`
-      : "Нет данных";
-
-    setText("entMinScore", `Проходной балл: ${resolveEntScoreText(selectedProgram)}`);
-    setText("entGrant", `Грантовых мест: ${selectedProgram?.grantText || "Нет данных"}`);
-    setText("entApplicants", `Заявок на факультет: ${selectedProgram?.applicantCountText || "Нет данных"}`);
-    setText("entScoreRange", `Диапазон баллов: ${scoreRangeText}`);
-    setText("entCompetition", `Конкурс: ${competitionText}`);
 
     if (!Number.isFinite(entValue)) {
-      setHtml("chanceResult", `Шанс поступления: Укажите балл ЕНТ`);
+      setText("chanceResult", "Шанс поступления: Укажите балл ЕНТ");
       return;
     }
 
     if (!Number.isFinite(requiredScore)) {
-      setHtml("chanceResult", "Шанс поступления: Нет данных по выбранному направлению");
+      setText("chanceResult", "Шанс поступления: Нет данных по выбранному направлению");
       return;
     }
 
@@ -417,10 +373,7 @@ function setupChanceCalculator(programs, transport, initialIndex = 0) {
     const chance = getChanceByScoreGap(scoreGap);
     const gapText = `${scoreGap >= 0 ? "+" : ""}${Math.round(scoreGap)}`;
 
-    setHtml(
-      "chanceResult",
-      `Шанс поступления: <strong>${chance}</strong> (разница ${gapText} баллов)<br><span class="chance-result-meta">Гранты: ${selectedProgram?.grantText || "Нет данных"} · Заявок: ${selectedProgram?.applicantCountText || "Нет данных"} · Диапазон: ${scoreRangeText}</span>`
-    );
+    setText("chanceResult", `Шанс поступления: ${chance} (разница ${gapText} баллов)`);
   }
 
   [entInput, programSelect].forEach((el) => {

@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 from pathlib import Path
@@ -126,7 +127,12 @@ def upload_excel_to_db(excel_file_path, sheet_name=0, table_name=None):
 
 	cleaned_df, column_types = prepare_dataframe(df)
 
-	conn = psycopg2.connect(**DB_CONFIG)
+	# Allow overriding DB connection with DATABASE_URL (useful for Render)
+	database_url = os.environ.get("DATABASE_URL")
+	if database_url:
+		conn = psycopg2.connect(database_url)
+	else:
+		conn = psycopg2.connect(**DB_CONFIG)
 	try:
 		create_table(conn, table_name, column_types)
 		insert_rows(conn, table_name, cleaned_df)

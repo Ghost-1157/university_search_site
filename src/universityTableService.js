@@ -1,6 +1,6 @@
 const db = require("./db");
 
-const TABLE_NAME = process.env.UNIFIED_UNIVERSITIES_TABLE || process.env.UNIVERSITIES_TABLE || "university_db_new";
+const TABLE_NAME = process.env.UNIFIED_UNIVERSITIES_TABLE || process.env.UNIVERSITIES_TABLE || "university_table_final";
 
 function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
