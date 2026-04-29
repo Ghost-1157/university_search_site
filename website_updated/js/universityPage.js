@@ -83,7 +83,13 @@ function formatScoreRange(value) {
   }
 
   const digitsOnly = text.replace(/\D+/g, "");
-  if (digitsOnly.length >= 4) {
+  if (digitsOnly.length === 4) {
+    const left = digitsOnly.slice(0, 2);
+    const right = digitsOnly.slice(2);
+    return `${left}-${right}`;
+  }
+
+  if (digitsOnly.length > 4) {
     const left = digitsOnly.slice(0, digitsOnly.length - 3);
     const right = digitsOnly.slice(-3);
     return `${left}-${right}`;
@@ -132,22 +138,23 @@ function escapeHtml(value) {
 function normalizeCorrectedRow(row) {
   const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
   const passScore = pickFirstNonEmpty(
-    pickExactColumn(row, "col_14"),
-    pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 13)
+    pickExactColumn(row, "col_16"),
+    pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15)
   );
   const grantRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "contests"),
     pickExactColumn(row, "col_15"),
     pickValue(row, ["grant", "grants", "budget"], 14)
   );
   const applicantRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_16"),
-    pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15)
+    pickExactColumn(row, "col_17"),
+    pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16)
   );
   const scoreRangeRaw = pickFirstNonEmpty(
     pickExactColumn(row, "col_17"),
     pickValue(row, ["score range", "range", "scores"], 16)
   );
-  const transportRaw = pickValue(row, ["transport"], 16);
+  const transportRaw = pickValue(row, ["transport"], 17);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
   const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
@@ -348,8 +355,8 @@ function resolveEntScoreText(program) {
 
   const row = program?.row || {};
   const fallbackRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_14"),
-    pickValue(row, ["pass", "ent", "threshold", "minimum", "min"], 13),
+    pickExactColumn(row, "col_16"),
+    pickValue(row, ["pass", "ent", "threshold", "minimum", "min"], 15),
     String(program?.scoreRangeText || "").split("-")[0]
   );
   const fallbackNumeric = toNumber(fallbackRaw);
@@ -399,9 +406,30 @@ function calculateChanceScore(program, entValue) {
   const contestCount = toNumber(program?.contestValue);
   const grantCount = toNumber(program?.grantValue);
   const applicantCount = toNumber(program?.applicantCountValue);
+  const scoreRangeRaw = String(program?.scoreRangeValue || "").replace(/\s+/g, "");
+  const scoreRangeDigits = scoreRangeRaw.replace(/\D+/g, "");
+  let lowerBound = NaN;
+  let upperBound = NaN;
+
+  if (scoreRangeDigits.length === 4) {
+    lowerBound = toNumber(scoreRangeDigits.slice(0, 2));
+    upperBound = toNumber(scoreRangeDigits.slice(2));
+  } else if (scoreRangeDigits.length > 4) {
+    lowerBound = toNumber(scoreRangeDigits.slice(0, scoreRangeDigits.length - 3));
+    upperBound = toNumber(scoreRangeDigits.slice(-3));
+  }
 
   const scoreGap = entValue - requiredScore;
-  let score = 52 + scoreGap * 4.5;
+  let score = 50 + scoreGap * 4.2;
+
+  if (Number.isFinite(lowerBound) && Number.isFinite(upperBound)) {
+    if (entValue >= lowerBound && entValue <= upperBound) {
+      score += 12;
+    } else {
+      const distance = entValue < lowerBound ? (lowerBound - entValue) : (entValue - upperBound);
+      score -= clamp(distance * 0.35, 0, 18);
+    }
+  }
 
   if (Number.isFinite(grantCount) && grantCount > 0) {
     const pressureBase = Number.isFinite(applicantCount) && applicantCount > 0
