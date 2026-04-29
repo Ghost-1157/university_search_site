@@ -1111,6 +1111,64 @@ body {
   margin-bottom: 20px;
 }
 
+.uni-card-block h3,
+.calculator-block h3 {
+  margin-bottom: 14px;
+}
+
+.uni-card-block input,
+.uni-card-block select,
+.calculator-block input,
+.calculator-block select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  font-size: clamp(14px, 1.2vw, 15px);
+  outline: none;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.uni-card-block input::placeholder,
+.calculator-block input::placeholder {
+  color: #6b7280;
+}
+
+.uni-card-block input:focus,
+.uni-card-block select:focus,
+.calculator-block input:focus,
+.calculator-block select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.uni-card-block input:hover,
+.uni-card-block select:hover,
+.calculator-block input:hover,
+.calculator-block select:hover {
+  transform: translateY(-1px);
+}
+
+.uni-card-block input,
+.uni-card-block select,
+.calculator-block input,
+.calculator-block select,
+.living-switch {
+  margin-bottom: 14px;
+}
+
+.calculator-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.calculator-block #chanceResult {
+  margin-top: 2px;
+}
+
 .living-switch {
   display: inline-flex;
   border: 1px solid #d1d5db;
