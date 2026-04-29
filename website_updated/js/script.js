@@ -352,34 +352,48 @@ function mergeUniversityData(unifiedRows) {
     };
   });
 
-  // Normalize living-related numbers: if values look like yearly totals (very large),
-  // convert them to monthly by dividing by 12. This fixes cases where source data
-  // stores annual amounts but UI expects monthly numbers.
-  function normalizeLivingForDisplay(u) {
-    const values = [u.transportValue, u.foodValue, u.dormLivingValue, u.apartmentValue, u.leisureValue, u.totalLivingValue]
-      .map((v) => toNumber(v))
-      .filter((n) => Number.isFinite(n));
+  // Ensure living-cost fields correspond to the university admission rows.
+  // Build a map of corrected rows by canonical university name so we can
+  // prefer admission/program rows (those with passScore or tuition) and
+  // only use transport-only rows as a fallback when the admission row lacks data.
+  const correctedByName = new Map();
+  corrected.forEach((c) => {
+    const key = normalizeName(c.name);
+    if (!correctedByName.has(key)) correctedByName.set(key, []);
+    correctedByName.get(key).push(c);
+  });
 
-    if (values.length === 0) return u;
+  function isAdmissionRow(r) {
+    return Number.isFinite(toNumber(r.passScoreValue)) || Number.isFinite(toNumber(r.tuitionValue)) || (r.faculty && String(r.faculty).trim() !== "");
+  }
 
-    const max = Math.max(...values);
-    // Heuristic: if the largest living value exceeds 200k, treat as annual and divide by 12.
-    if (max > 200000) {
-      const scaled = { ...u };
-      if (Number.isFinite(toNumber(u.transportValue))) scaled.transportValue = toNumber(u.transportValue) / 12;
-      if (Number.isFinite(toNumber(u.foodValue))) scaled.foodValue = toNumber(u.foodValue) / 12;
-      if (Number.isFinite(toNumber(u.dormLivingValue))) scaled.dormLivingValue = toNumber(u.dormLivingValue) / 12;
-      if (Number.isFinite(toNumber(u.apartmentValue))) scaled.apartmentValue = toNumber(u.apartmentValue) / 12;
-      if (Number.isFinite(toNumber(u.leisureValue))) scaled.leisureValue = toNumber(u.leisureValue) / 12;
-      if (Number.isFinite(toNumber(u.totalLivingValue))) scaled.totalLivingValue = toNumber(u.totalLivingValue) / 12;
-      return scaled;
-    }
-
-    return u;
+  function isTransportRow(r) {
+    return !isAdmissionRow(r) && (
+      Number.isFinite(toNumber(r.transportValue)) ||
+      Number.isFinite(toNumber(r.foodValue)) ||
+      Number.isFinite(toNumber(r.dormLivingValue)) ||
+      Number.isFinite(toNumber(r.totalLivingValue)) ||
+      Number.isFinite(toNumber(r.apartmentValue)) ||
+      Number.isFinite(toNumber(r.leisureValue))
+    );
   }
 
   for (let i = 0; i < merged.length; i++) {
-    merged[i] = normalizeLivingForDisplay(merged[i]);
+    const key = normalizeName(merged[i].name);
+    const candidates = correctedByName.get(key) || [];
+    // Prefer admission row
+    const admission = candidates.find(isAdmissionRow);
+    const transportOnly = candidates.find(isTransportRow);
+
+    const src = admission || transportOnly || null;
+    if (src) {
+      if (!Number.isFinite(merged[i].transportValue) && Number.isFinite(toNumber(src.transportValue))) merged[i].transportValue = toNumber(src.transportValue);
+      if (!Number.isFinite(merged[i].foodValue) && Number.isFinite(toNumber(src.foodValue))) merged[i].foodValue = toNumber(src.foodValue);
+      if (!Number.isFinite(merged[i].dormLivingValue) && Number.isFinite(toNumber(src.dormLivingValue))) merged[i].dormLivingValue = toNumber(src.dormLivingValue);
+      if (!Number.isFinite(merged[i].apartmentValue) && Number.isFinite(toNumber(src.apartmentValue))) merged[i].apartmentValue = toNumber(src.apartmentValue);
+      if (!Number.isFinite(merged[i].leisureValue) && Number.isFinite(toNumber(src.leisureValue))) merged[i].leisureValue = toNumber(src.leisureValue);
+      if (!Number.isFinite(merged[i].totalLivingValue) && Number.isFinite(toNumber(src.totalLivingValue))) merged[i].totalLivingValue = toNumber(src.totalLivingValue);
+    }
   }
 
   baseUniversities.forEach((base) => {
