@@ -192,15 +192,10 @@ function normalizeCorrectedRow(row) {
       ? pickFirstNonEmpty(contests, c15, pickValue(row, ["grant", "grants", "budget"], 14))
       : pickFirstNonEmpty(contests, c15, pickValue(row, ["grant", "grants", "budget"], 14));
 
-  const applicantRaw = sourceSchema
-    ? pickFirstNonEmpty(c16, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15))
-    : shiftedSchema
-      ? pickFirstNonEmpty(c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16))
-      : pickFirstNonEmpty(c16, c17, pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16));
+  const contestRaw = pickExactColumn(row, "col_22") || pickValue(row, ["contest", "konkurs", "competition", "applicant", "applications", "students"], 21);
+  const scoreRangeRaw = pickExactColumn(row, "col_23") || c17;
 
-  const scoreRangeRaw = c17;
-
-  const transportRaw = pickValue(row, ["transport"], shiftedSchema ? 17 : 16);
+  const transportRaw = pickExactColumn(row, "col_17") || pickValue(row, ["transport"], shiftedSchema ? 17 : 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
   const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
@@ -220,12 +215,12 @@ function normalizeCorrectedRow(row) {
     programName: String(programName || "Не указано"),
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
-    contestValue: applicantRaw,
-    contestText: formatCompetitionText(applicantRaw),
+    contestValue: contestRaw,
+    contestText: formatCompetitionText(contestRaw),
     grantValue: grantRaw,
     grantText: formatCountOrText(grantRaw),
-    applicantCountValue: applicantRaw,
-    applicantCountText: formatCountOrText(applicantRaw),
+    applicantCountValue: contestRaw,
+    applicantCountText: formatCountOrText(contestRaw),
     scoreRangeValue: scoreRangeRaw,
     scoreRangeText: formatScoreRange(scoreRangeRaw),
     degree: String(degree || ""),
