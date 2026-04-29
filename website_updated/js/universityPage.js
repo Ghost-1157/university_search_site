@@ -136,25 +136,56 @@ function escapeHtml(value) {
 }
 
 function normalizeCorrectedRow(row) {
-  const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
-  const passScore = pickFirstNonEmpty(
-    pickExactColumn(row, "col_16"),
-    pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15)
-  );
-  const grantRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "contests"),
-    pickExactColumn(row, "col_15"),
-    pickValue(row, ["grant", "grants", "budget"], 14)
-  );
-  const applicantRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_17"),
-    pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16)
-  );
-  const scoreRangeRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "col_17"),
-    pickValue(row, ["score range", "range", "scores"], 16)
-  );
-  const transportRaw = pickValue(row, ["transport"], 17);
+  const admissionSchema = Number.isFinite(toNumber(pickExactColumn(row, "col_14")))
+    && Number.isFinite(toNumber(pickExactColumn(row, "col_15")))
+    && Number.isFinite(toNumber(pickExactColumn(row, "col_16")))
+    && String(pickExactColumn(row, "col_17") || "").replace(/\D/g, "").length >= 4;
+
+  const programCode = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_7"), pickValue(row, ["code"], 6))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_8"), pickValue(row, ["code"], 7));
+
+  const programName = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_8"), pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 7))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_7"), pickValue(row, ["specialty", "faculty", "program", "major", "direction"], 6));
+
+  const degree = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_9"), pickValue(row, ["degree", "qualification", "level"], 8))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_9"), pickValue(row, ["degree", "qualification", "level"], 8));
+
+  const language = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_10"), pickValue(row, ["language", "lang"], 9))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_10"), pickValue(row, ["language", "lang"], 9));
+
+  const duration = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_11"), pickValue(row, ["duration", "term", "length"], 10))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_11"), pickValue(row, ["duration", "term", "length"], 10));
+
+  const tuitionRaw = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_12"), pickValue(row, ["tuition", "price", "cost", "fee"], 11))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_12"), pickValue(row, ["tuition", "price", "cost", "fee"], 11));
+
+  const link = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_13"), pickValue(row, ["link", "url"], 12))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_13"), pickValue(row, ["link", "url"], 12));
+
+  const passScore = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_14"), pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 13))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_16"), pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 15));
+
+  const grantRaw = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_15"), pickExactColumn(row, "contests"), pickValue(row, ["grant", "grants", "budget"], 14))
+    : pickFirstNonEmpty(pickExactColumn(row, "contests"), pickExactColumn(row, "col_15"), pickValue(row, ["grant", "grants", "budget"], 14));
+
+  const applicantRaw = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_16"), pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 16));
+
+  const scoreRangeRaw = admissionSchema
+    ? pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["score range", "range", "scores"], 16))
+    : pickFirstNonEmpty(pickExactColumn(row, "col_17"), pickValue(row, ["score range", "range", "scores"], 16));
+
+  const transportRaw = pickValue(row, ["transport"], admissionSchema ? 17 : 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
   const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
@@ -162,14 +193,15 @@ function normalizeCorrectedRow(row) {
   const totalRaw = pickExactColumn(row, "col_21") || pickValue(row, ["sum", "total"], 21);
 
   return {
+    schemaType: admissionSchema ? "admission" : "legacy",
     name: String(pickValue(row, ["university_name", "university", "name", "title", "col"], 0) || ""),
     city: String(pickValue(row, ["region", "city", "location", "col_2"], 1) || ""),
     type: String(pickValue(row, ["type", "ownership", "status", "col_3"], 2) || ""),
     email: String(pickValue(row, ["email", "mail", "col_4"], 3) || ""),
     phone: String(pickValue(row, ["phone", "contact", "tel", "col_5"], 4) || ""),
     website: String(pickValue(row, ["website", "site", "url", "col_6"], 5) || ""),
-    subjectCombination: String(pickValue(row, ["subject", "profile", "col_7"], 6) || ""),
-    programCode: String(pickValue(row, ["code", "col_8"], 7) || ""),
+    subjectCombination: String(pickValue(row, ["subject", "profile", "col_6"], admissionSchema ? 5 : 6) || ""),
+    programCode: String(programCode || ""),
     programName: String(programName || "Не указано"),
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
@@ -181,17 +213,17 @@ function normalizeCorrectedRow(row) {
     applicantCountText: formatCountOrText(applicantRaw),
     scoreRangeValue: scoreRangeRaw,
     scoreRangeText: formatScoreRange(scoreRangeRaw),
-    degree: String(pickValue(row, ["degree", "qualification", "level", "col_10"], 9) || ""),
-    language: String(pickValue(row, ["language", "lang", "col_11"], 10) || ""),
-    duration: String(pickValue(row, ["duration", "term", "length", "col_12"], 11) || ""),
-    tuitionRaw: pickValue(row, ["tuition", "price", "cost", "fee", "col_13"], 12),
+    degree,
+    language,
+    duration,
+    tuitionRaw,
     transport: transportRaw,
     apartment: apartmentRaw,
     food: foodRaw,
     dormitory: dormitoryRaw,
     leisure: leisureRaw,
     total: totalRaw,
-    link: String(pickValue(row, ["link", "url", "col_14"], 13) || ""),
+    link: String(link || ""),
     row
   };
 }
@@ -249,14 +281,19 @@ function findProgramIndexByDirection(programs, directionName) {
     return 0;
   }
 
-  const exactIndex = programs.findIndex((program) => normalizeName(program?.programName) === target);
+  const exactIndex = programs.findIndex((program) => {
+    const programNameMatch = normalizeName(program?.programName) === target;
+    const programCodeMatch = normalizeName(program?.programCode) === target;
+    return programNameMatch || programCodeMatch;
+  });
   if (exactIndex >= 0) {
     return exactIndex;
   }
 
   const partialIndex = programs.findIndex((program) => {
     const candidate = normalizeName(program?.programName);
-    return candidate.includes(target) || target.includes(candidate);
+    const codeCandidate = normalizeName(program?.programCode);
+    return candidate.includes(target) || target.includes(candidate) || codeCandidate.includes(target) || target.includes(codeCandidate);
   });
 
   return partialIndex >= 0 ? partialIndex : 0;
@@ -620,7 +657,8 @@ async function loadUniversityPage() {
   }
 
   const unifiedPayload = await unifiedResponse.json();
-  const unifiedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
+  const normalizedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
+  const unifiedRows = normalizedRows.filter((row) => row.schemaType === "admission");
 
   const canonicalName = resolveCanonicalUniversityName(unifiedRows, targetName)
     || targetName;
