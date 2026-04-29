@@ -352,6 +352,36 @@ function mergeUniversityData(unifiedRows) {
     };
   });
 
+  // Normalize living-related numbers: if values look like yearly totals (very large),
+  // convert them to monthly by dividing by 12. This fixes cases where source data
+  // stores annual amounts but UI expects monthly numbers.
+  function normalizeLivingForDisplay(u) {
+    const values = [u.transportValue, u.foodValue, u.dormLivingValue, u.apartmentValue, u.leisureValue, u.totalLivingValue]
+      .map((v) => toNumber(v))
+      .filter((n) => Number.isFinite(n));
+
+    if (values.length === 0) return u;
+
+    const max = Math.max(...values);
+    // Heuristic: if the largest living value exceeds 200k, treat as annual and divide by 12.
+    if (max > 200000) {
+      const scaled = { ...u };
+      if (Number.isFinite(toNumber(u.transportValue))) scaled.transportValue = toNumber(u.transportValue) / 12;
+      if (Number.isFinite(toNumber(u.foodValue))) scaled.foodValue = toNumber(u.foodValue) / 12;
+      if (Number.isFinite(toNumber(u.dormLivingValue))) scaled.dormLivingValue = toNumber(u.dormLivingValue) / 12;
+      if (Number.isFinite(toNumber(u.apartmentValue))) scaled.apartmentValue = toNumber(u.apartmentValue) / 12;
+      if (Number.isFinite(toNumber(u.leisureValue))) scaled.leisureValue = toNumber(u.leisureValue) / 12;
+      if (Number.isFinite(toNumber(u.totalLivingValue))) scaled.totalLivingValue = toNumber(u.totalLivingValue) / 12;
+      return scaled;
+    }
+
+    return u;
+  }
+
+  for (let i = 0; i < merged.length; i++) {
+    merged[i] = normalizeLivingForDisplay(merged[i]);
+  }
+
   baseUniversities.forEach((base) => {
     const key = normalizeName(base.name);
     if (seen.has(key)) {
