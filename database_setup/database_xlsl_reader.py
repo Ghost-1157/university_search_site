@@ -91,6 +91,14 @@ def create_table(conn, table_name, column_types):
 	conn.commit()
 
 
+def replace_table_from_dataframe(conn, table_name, df):
+	"""Drop and recreate a table directly from an already prepared dataframe."""
+	cleaned_df, column_types = prepare_dataframe(df)
+	create_table(conn, table_name, column_types)
+	insert_rows(conn, table_name, cleaned_df)
+	return cleaned_df, column_types
+
+
 def insert_rows(conn, table_name, df):
 	"""Bulk insert Excel rows into PostgreSQL table."""
 	if df.empty:
@@ -178,8 +186,23 @@ if __name__ == '__main__':
 	except ValueError:
 		sheet = raw_sheet
 
+	replace_mode = len(sys.argv) >= 5 and sys.argv[4].lower() in ('replace', '--replace', 'drop-create', '--drop-create')
+
 	try:
-		upload_excel_to_db(file_path, sheet_name=sheet, table_name=target_table)
+		if replace_mode:
+			df = pd.read_excel(file_path, sheet_name=sheet)
+			database_url = os.environ.get('DATABASE_URL')
+			if database_url:
+				conn = psycopg2.connect(database_url)
+			else:
+				conn = psycopg2.connect(**DB_CONFIG)
+			try:
+				replace_table_from_dataframe(conn, target_table or normalize_identifier(Path(file_path).stem), df)
+				print(f"Successfully replaced '{target_table or normalize_identifier(Path(file_path).stem)}' with '{file_path}'.")
+			finally:
+				conn.close()
+		else:
+			upload_excel_to_db(file_path, sheet_name=sheet, table_name=target_table)
 	except Exception as exc:
 		print(f"Error: {exc}")
 		sys.exit(1)
