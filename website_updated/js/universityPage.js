@@ -72,6 +72,38 @@ function formatCountOrText(value) {
   return text || "Нет данных";
 }
 
+function formatScoreRange(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "Нет данных";
+  }
+
+  if (text.includes("-") || text.includes("–")) {
+    return text;
+  }
+
+  const digitsOnly = text.replace(/\D+/g, "");
+  if (digitsOnly.length >= 4) {
+    const left = digitsOnly.slice(0, digitsOnly.length - 3);
+    const right = digitsOnly.slice(-3);
+    return `${left}-${right}`;
+  }
+
+  return text;
+}
+
+function formatCompetitionText(applicantsValue, grantsValue) {
+  const applicants = toNumber(applicantsValue);
+  const grants = toNumber(grantsValue);
+
+  if (!Number.isFinite(applicants) || !Number.isFinite(grants) || grants <= 0) {
+    return "Нет данных";
+  }
+
+  const ratio = applicants / grants;
+  return `${ratio.toFixed(1)} заявки на место`;
+}
+
 function pickExactColumn(row, columnName) {
   if (!row || typeof row !== "object") {
     return "";
@@ -99,13 +131,23 @@ function escapeHtml(value) {
 
 function normalizeCorrectedRow(row) {
   const programName = pickValue(row, ["specialty", "faculty", "program", "major", "direction", "col_9"], 8);
-  const passScore = pickValue(row, ["pass", "ent", "threshold", "min score", "minimum", "col_16"], 15);
-  const grantRaw = pickFirstNonEmpty(
-    pickExactColumn(row, "contests"),
-    pickExactColumn(row, "col_22"),
-    pickValue(row, ["contest", "konkurs", "grant", "grants"], 21)
+  const passScore = pickFirstNonEmpty(
+    pickExactColumn(row, "col_14"),
+    pickValue(row, ["pass", "ent", "threshold", "min score", "minimum"], 13)
   );
-  const transportRaw = pickExactColumn(row, "col_17") || pickValue(row, ["transport"], 16);
+  const grantRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "col_15"),
+    pickValue(row, ["grant", "grants", "budget"], 14)
+  );
+  const applicantRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "col_16"),
+    pickValue(row, ["applicant", "applications", "students", "contest", "konkurs", "competition"], 15)
+  );
+  const scoreRangeRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "col_17"),
+    pickValue(row, ["score range", "range", "scores"], 16)
+  );
+  const transportRaw = pickValue(row, ["transport"], 16);
   const apartmentRaw = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "rent"], 17);
   const foodRaw = pickExactColumn(row, "col_18") || pickValue(row, ["food"], 18);
   const dormitoryRaw = pickExactColumn(row, "col_19") || pickValue(row, ["dormitory", "hostel_cost"], 19);
@@ -124,8 +166,14 @@ function normalizeCorrectedRow(row) {
     programName: String(programName || "Не указано"),
     passScoreValue: toNumber(passScore),
     passScoreText: Number.isFinite(toNumber(passScore)) ? String(Math.round(toNumber(passScore))) : "Не указано",
+    contestValue: applicantRaw,
+    contestText: formatCompetitionText(applicantRaw, grantRaw),
     grantValue: grantRaw,
     grantText: formatCountOrText(grantRaw),
+    applicantCountValue: applicantRaw,
+    applicantCountText: formatCountOrText(applicantRaw),
+    scoreRangeValue: scoreRangeRaw,
+    scoreRangeText: formatScoreRange(scoreRangeRaw),
     degree: String(pickValue(row, ["degree", "qualification", "level", "col_10"], 9) || ""),
     language: String(pickValue(row, ["language", "lang", "col_11"], 10) || ""),
     duration: String(pickValue(row, ["duration", "term", "length", "col_12"], 11) || ""),
@@ -299,7 +347,11 @@ function resolveEntScoreText(program) {
   }
 
   const row = program?.row || {};
-  const fallbackRaw = pickValue(row, ["col_16", "pass", "ent", "threshold", "minimum", "min"], 15);
+  const fallbackRaw = pickFirstNonEmpty(
+    pickExactColumn(row, "col_14"),
+    pickValue(row, ["pass", "ent", "threshold", "minimum", "min"], 13),
+    String(program?.scoreRangeText || "").split("-")[0]
+  );
   const fallbackNumeric = toNumber(fallbackRaw);
   if (Number.isFinite(fallbackNumeric)) {
     return String(Math.round(fallbackNumeric));
@@ -312,7 +364,10 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   if (programs.length === 0) {
     setText("entMinScore", "Минимальный балл: Нет данных");
     setText("entThreshold", "Пороговый балл: Нет данных");
+    setText("entContest", "Конкурс: Нет данных");
     setText("entGrant", "Гранты: Нет данных");
+    setText("entApplicants", "Поступающих: Нет данных");
+    setText("entScoreRange", "Диапазон баллов: Нет данных");
     setText("tuitionValue", "Стоимость: Нет данных");
     return;
   }
@@ -324,24 +379,75 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   const entScoreText = resolveEntScoreText(current);
   setText("entMinScore", `Минимальный балл: ${entScoreText}`);
   setText("entThreshold", `Пороговый балл: ${entScoreText}`);
+  setText("entContest", `Конкурс: ${current.contestText || "Нет данных"}`);
   setText("entGrant", `Гранты: ${current.grantText || "Нет данных"}`);
+  setText("entApplicants", `Поступающих: ${current.applicantCountText || "Нет данных"}`);
+  setText("entScoreRange", `Диапазон баллов: ${current.scoreRangeText || "Нет данных"}`);
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
 }
 
-function getChanceByScoreGap(scoreGap) {
-  if (!Number.isFinite(scoreGap)) {
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function calculateChanceScore(program, entValue) {
+  const requiredScore = toNumber(program?.passScoreValue);
+  if (!Number.isFinite(requiredScore)) {
+    return NaN;
+  }
+
+  const contestCount = toNumber(program?.contestValue);
+  const grantCount = toNumber(program?.grantValue);
+  const applicantCount = toNumber(program?.applicantCountValue);
+
+  const scoreGap = entValue - requiredScore;
+  let score = 52 + scoreGap * 4.5;
+
+  if (Number.isFinite(grantCount) && grantCount > 0) {
+    const pressureBase = Number.isFinite(applicantCount) && applicantCount > 0
+      ? applicantCount
+      : Number.isFinite(contestCount) && contestCount > 0
+        ? contestCount
+        : grantCount;
+    const grantShare = grantCount / pressureBase;
+    score += clamp((grantShare - 0.25) * 45, -18, 18);
+  }
+
+  if (Number.isFinite(contestCount) && Number.isFinite(grantCount) && grantCount > 0) {
+    const competitionRatio = contestCount / grantCount;
+    score -= clamp((competitionRatio - 1) * 5, 0, 25);
+  }
+
+  if (Number.isFinite(applicantCount) && Number.isFinite(grantCount) && grantCount > 0) {
+    const applicantRatio = applicantCount / grantCount;
+    score -= clamp((applicantRatio - 1.5) * 2.5, 0, 20);
+  }
+
+  return clamp(score, 5, 95);
+}
+
+function getChanceLabel(score) {
+  if (!Number.isFinite(score)) {
     return "Нет данных";
   }
 
-  if (scoreGap >= 20) {
+  if (score >= 80) {
+    return "Очень высокий";
+  }
+
+  if (score >= 65) {
     return "Высокий";
   }
 
-  if (scoreGap >= 0) {
+  if (score >= 50) {
     return "Средний";
   }
 
-  return "Низкий";
+  if (score >= 35) {
+    return "Низкий";
+  }
+
+  return "Очень низкий";
 }
 
 function setupChanceCalculator(programs, transport, initialIndex = 0) {
@@ -357,23 +463,29 @@ function setupChanceCalculator(programs, transport, initialIndex = 0) {
     const entValue = toNumber(entInput?.value);
     const selectedIndex = Number.parseInt(programSelect?.value || "", 10);
     const selectedProgram = Number.isFinite(selectedIndex) && programs[selectedIndex] ? programs[selectedIndex] : programs[0];
-    const requiredScore = toNumber(selectedProgram?.passScoreValue);
 
     if (!Number.isFinite(entValue)) {
       setText("chanceResult", "Шанс поступления: Укажите балл ЕНТ");
+      setText("chanceDetails", "");
       return;
     }
 
-    if (!Number.isFinite(requiredScore)) {
+    const chanceScore = calculateChanceScore(selectedProgram, entValue);
+    if (!Number.isFinite(chanceScore)) {
       setText("chanceResult", "Шанс поступления: Нет данных по выбранному направлению");
+      setText("chanceDetails", "");
       return;
     }
 
+    const requiredScore = toNumber(selectedProgram?.passScoreValue);
     const scoreGap = entValue - requiredScore;
-    const chance = getChanceByScoreGap(scoreGap);
     const gapText = `${scoreGap >= 0 ? "+" : ""}${Math.round(scoreGap)}`;
 
-    setText("chanceResult", `Шанс поступления: ${chance} (разница ${gapText} баллов)`);
+    setText("chanceResult", `Шанс поступления: ${getChanceLabel(chanceScore)} (${Math.round(chanceScore)}%)`);
+    setText(
+      "chanceDetails",
+      `ЕНТ: ${Math.round(entValue)} • До проходного: ${gapText} • Конкурс: ${selectedProgram?.contestText || "Нет данных"} • Гранты: ${selectedProgram?.grantText || "Нет данных"} • Поступающих: ${selectedProgram?.applicantCountText || "Нет данных"}`
+    );
   }
 
   [entInput, programSelect].forEach((el) => {
