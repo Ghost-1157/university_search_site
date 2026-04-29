@@ -373,7 +373,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
     setText("entThreshold", "Пороговый балл: Нет данных");
     setText("entContest", "Конкурс: Нет данных");
     setText("entGrant", "Гранты: Нет данных");
-    setText("entApplicants", "Поступающих: Нет данных");
     setText("entScoreRange", "Диапазон баллов: Нет данных");
     setText("tuitionValue", "Стоимость: Нет данных");
     return;
@@ -388,7 +387,6 @@ function updateProgramDependentBlocks(programs, selectedIndex) {
   setText("entThreshold", `Пороговый балл: ${entScoreText}`);
   setText("entContest", `Конкурс: ${current.contestText || "Нет данных"}`);
   setText("entGrant", `Гранты: ${current.grantText || "Нет данных"}`);
-  setText("entApplicants", `Поступающих: ${current.applicantCountText || "Нет данных"}`);
   setText("entScoreRange", `Диапазон баллов: ${current.scoreRangeText || "Нет данных"}`);
   setText("tuitionValue", `Стоимость: ${tuitionText}`);
 }
@@ -512,7 +510,7 @@ function setupChanceCalculator(programs, transport, initialIndex = 0) {
     setText("chanceResult", `Шанс поступления: ${getChanceLabel(chanceScore)} (${Math.round(chanceScore)}%)`);
     setText(
       "chanceDetails",
-      `ЕНТ: ${Math.round(entValue)} • До проходного: ${gapText} • Конкурс: ${selectedProgram?.contestText || "Нет данных"} • Гранты: ${selectedProgram?.grantText || "Нет данных"} • Поступающих: ${selectedProgram?.applicantCountText || "Нет данных"}`
+      `ЕНТ: ${Math.round(entValue)} • До проходного: ${gapText} • Конкурс: ${selectedProgram?.contestText || "Нет данных"} • Гранты: ${selectedProgram?.grantText || "Нет данных"}`
     );
   }
 
