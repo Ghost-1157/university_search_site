@@ -1,3 +1,5 @@
+const { Pool } = require("pg");
+
 // Support Render's DATABASE_URL or individual connection parameters
 const pool = new Pool(
   process.env.DATABASE_URL
