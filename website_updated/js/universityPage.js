@@ -243,6 +243,51 @@ function normalizeCorrectedRow(row) {
   };
 }
 
+function normalizeTransportRow(row) {
+  const name = pickExactColumn(row, "col") || pickValue(row, ["university", "name", "title"], 0);
+  const transport = pickExactColumn(row, "col_2") || pickValue(row, ["transport"], 1);
+  const apartment = pickExactColumn(row, "col_1") || pickValue(row, ["apartment", "flat", "room"], 2);
+  const food = pickExactColumn(row, "col_3") || pickValue(row, ["food"], 3);
+  const dormitory = pickExactColumn(row, "col_4") || pickValue(row, ["dormitory", "hostel", "accommodation"], 4);
+  const leisure = pickExactColumn(row, "col_5") || pickValue(row, ["leisure"], 5);
+  const total = pickExactColumn(row, "col_6") || pickValue(row, ["sum", "total"], 6);
+
+  return {
+    schemaType: "transport",
+    name: String(name || ""),
+    city: "",
+    type: "",
+    email: "",
+    phone: "",
+    website: "",
+    subjectCombination: "",
+    programCode: "",
+    programName: String(name || ""),
+    passScoreValue: NaN,
+    passScoreText: "Не указано",
+    contestValue: NaN,
+    contestText: "Нет данных",
+    grantValue: NaN,
+    grantText: "Нет данных",
+    applicantCountValue: NaN,
+    applicantCountText: "Нет данных",
+    scoreRangeValue: "",
+    scoreRangeText: "Нет данных",
+    degree: "",
+    language: "",
+    duration: "",
+    tuitionRaw: NaN,
+    transport,
+    apartment,
+    food,
+    dormitory,
+    leisure,
+    total,
+    link: "",
+    row
+  };
+}
+
 function findRowsByUniversity(rows, universityName) {
   const target = normalizeName(universityName);
 
@@ -710,7 +755,7 @@ async function loadUniversityPage() {
   const unifiedPayload = await unifiedResponse.json();
   const transportPayload = transportResponse.ok ? await transportResponse.json() : { rows: [] };
   const normalizedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
-  const normalizedTransportRows = (Array.isArray(transportPayload.rows) ? transportPayload.rows : []).map(normalizeCorrectedRow);
+  const normalizedTransportRows = (Array.isArray(transportPayload.rows) ? transportPayload.rows : []).map(normalizeTransportRow);
   const admissionRows = normalizedRows.filter((row) => row.schemaType === "source" || row.schemaType === "shifted");
   const unifiedRows = admissionRows.length > 0 ? admissionRows : normalizedRows;
   const transportRows = normalizedTransportRows.length > 0 ? normalizedTransportRows : unifiedRows;
@@ -719,18 +764,19 @@ async function loadUniversityPage() {
     || targetName;
 
   const filteredPrograms = pickBestProgramRows(findRowsByCanonicalName(unifiedRows, canonicalName));
-  const filteredTransport = pickBestProgramRows(findRowsByCanonicalName(transportRows, canonicalName));
-  const resolvedTransportRows = filteredTransport.length > 0 ? filteredTransport : filteredPrograms;
+  const filteredTransport = pickBestProgramRows(findRowsByUniversity(transportRows, canonicalName || targetName));
+  const resolvedTransportRows = filteredTransport.length > 0 ? filteredTransport : transportRows;
+  const livingRows = filteredPrograms.length > 0 ? filteredPrograms : resolvedTransportRows;
   const initialProgramIndex = findProgramIndexByDirection(filteredPrograms, targetDirection);
 
-  const resolvedName = canonicalName || filteredPrograms[0]?.name || filteredTransport[0]?.name || "Университет";
+  const resolvedName = canonicalName || filteredPrograms[0]?.name || resolvedTransportRows[0]?.name || "Университет";
 
-  renderMainBlocks(resolvedName, filteredPrograms, resolvedTransportRows);
+  renderMainBlocks(resolvedName, filteredPrograms, livingRows);
   populateProgramSelects(filteredPrograms);
   renderProgramList(filteredPrograms);
   setupProgramLinkedFields(filteredPrograms, initialProgramIndex);
-  setupChanceCalculator(filteredPrograms, resolvedTransportRows[0], initialProgramIndex);
-  renderRawData(filteredPrograms, resolvedTransportRows);
+  setupChanceCalculator(filteredPrograms, livingRows[0], initialProgramIndex);
+  renderRawData(filteredPrograms, livingRows);
 }
 
 loadUniversityPage().catch(() => {
