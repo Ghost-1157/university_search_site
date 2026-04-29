@@ -136,10 +136,15 @@ function escapeHtml(value) {
 }
 
 function normalizeCorrectedRow(row) {
-  const admissionSchema = Number.isFinite(toNumber(pickExactColumn(row, "col_14")))
-    && Number.isFinite(toNumber(pickExactColumn(row, "col_15")))
-    && Number.isFinite(toNumber(pickExactColumn(row, "col_16")))
-    && String(pickExactColumn(row, "col_17") || "").replace(/\D/g, "").length >= 4;
+  const col14Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_14")));
+  const col15Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_15")));
+  const col16Numeric = Number.isFinite(toNumber(pickExactColumn(row, "col_16")));
+  const col17Digits = String(pickExactColumn(row, "col_17") || "").replace(/\D/g, "").length;
+  const contestsNumeric = Number.isFinite(toNumber(pickExactColumn(row, "contests")));
+
+  // Accept both admission layouts found in the merged table.
+  const admissionSchema = (col14Numeric && col15Numeric && col16Numeric && col17Digits >= 4)
+    || (col16Numeric && col17Digits >= 4 && contestsNumeric);
 
   const programCode = admissionSchema
     ? pickFirstNonEmpty(pickExactColumn(row, "col_7"), pickValue(row, ["code"], 6))
@@ -658,7 +663,8 @@ async function loadUniversityPage() {
 
   const unifiedPayload = await unifiedResponse.json();
   const normalizedRows = (Array.isArray(unifiedPayload.rows) ? unifiedPayload.rows : []).map(normalizeCorrectedRow);
-  const unifiedRows = normalizedRows.filter((row) => row.schemaType === "admission");
+  const admissionRows = normalizedRows.filter((row) => row.schemaType === "admission");
+  const unifiedRows = admissionRows.length > 0 ? admissionRows : normalizedRows;
 
   const canonicalName = resolveCanonicalUniversityName(unifiedRows, targetName)
     || targetName;
